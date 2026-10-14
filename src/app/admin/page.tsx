@@ -245,7 +245,7 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/cron/nightly-review', { method: 'POST' });
       const data = await res.json();
       setMsg({
-        text: `Nightly review executed! Cleared and approved ${data.autoApproved || 0} submissions.`,
+        text: `Daily 10:00 AM review executed! Cleared and approved ${data.autoApproved || 0} submissions.`,
         type: 'success',
       });
       await loadTabContent();
@@ -501,7 +501,7 @@ export default function AdminDashboardPage() {
               isLoading={isLoading}
               leftIcon={<Play className="w-3.5 h-3.5 text-[#F95700]" />}
             >
-              Run Nightly Review Now
+              Run 10:00 AM Daily Review
             </Button>
           </div>
         </header>
@@ -1279,55 +1279,57 @@ export default function AdminDashboardPage() {
 
       {/* MODAL 1: CREDIT USER WALLET */}
       {selectedUserForCredit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
-          <Card className="max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-              <h3 className="text-base font-bold text-[#111827]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
+              <h3 className="text-sm sm:text-base font-bold text-[#111827]">
                 Credit User Wallet
               </h3>
               <button
                 onClick={() => setSelectedUserForCredit(null)}
-                className="text-[#9CA3AF] hover:text-[#111827] text-lg font-bold"
+                className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB] text-xs space-y-1">
-              <span className="text-[#6B7280] block">Target Account:</span>
-              <strong className="text-sm text-[#111827] block">
-                {selectedUserForCredit.email}
-              </strong>
-              <span className="text-[#6B7280]">
-                Current Balance:{' '}
-                <strong className="text-[#10B981]">
-                  {formatNaira(
-                    BigInt(selectedUserForCredit.temutask_wallets?.balance_kobo || 0)
-                  )}
-                </strong>
-              </span>
-            </div>
+            <form onSubmit={handleCreditWallet} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
+                <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB] text-xs space-y-1">
+                  <span className="text-[#6B7280] block">Target Account:</span>
+                  <strong className="text-sm text-[#111827] block truncate">
+                    {selectedUserForCredit.email}
+                  </strong>
+                  <span className="text-[#6B7280]">
+                    Current Balance:{' '}
+                    <strong className="text-[#10B981]">
+                      {formatNaira(
+                        BigInt(selectedUserForCredit.temutask_wallets?.balance_kobo || 0)
+                      )}
+                    </strong>
+                  </span>
+                </div>
 
-            <form onSubmit={handleCreditWallet} className="space-y-4">
-              <Input
-                label="Credit Amount (₦)"
-                placeholder="e.g. 500 or 2000"
-                type="number"
-                min="1"
-                step="1"
-                value={creditAmountNaira}
-                onChange={(e) => setCreditAmountNaira(e.target.value)}
-                required
-              />
+                <Input
+                  label="Credit Amount (₦)"
+                  placeholder="e.g. 500 or 2000"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={creditAmountNaira}
+                  onChange={(e) => setCreditAmountNaira(e.target.value)}
+                  required
+                />
 
-              <Input
-                label="Reason / Audit Note"
-                placeholder="e.g. Compensation for dispute #104 or Promo Bonus"
-                value={creditReason}
-                onChange={(e) => setCreditReason(e.target.value)}
-              />
+                <Input
+                  label="Reason / Audit Note"
+                  placeholder="e.g. Compensation for dispute #104 or Promo Bonus"
+                  value={creditReason}
+                  onChange={(e) => setCreditReason(e.target.value)}
+                />
+              </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="p-3 sm:p-3.5 border-t border-[#E5E7EB] bg-[#F7F7F8] flex items-center justify-end gap-2.5 shrink-0">
                 <Button
                   type="button"
                   variant="outline"
@@ -1348,63 +1350,65 @@ export default function AdminDashboardPage() {
                 </Button>
               </div>
             </form>
-          </Card>
+          </div>
         </div>
       )}
 
       {/* MODAL 2: GRANT / EXTEND PRO MEMBERSHIP */}
       {selectedUserForPro && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
-          <Card className="max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-              <h3 className="text-base font-bold text-[#111827]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
+              <h3 className="text-sm sm:text-base font-bold text-[#111827]">
                 Grant / Extend Pro Membership
               </h3>
               <button
                 onClick={() => setSelectedUserForPro(null)}
-                className="text-[#9CA3AF] hover:text-[#111827] text-lg font-bold"
+                className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-3 bg-[#FFF5F0] rounded-xl border border-[#F95700]/30 text-xs space-y-1">
-              <span className="text-[#6B7280] block">Target Account:</span>
-              <strong className="text-sm text-[#111827] block">
-                {selectedUserForPro.email}
-              </strong>
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-[#6B7280]">Current Tier:</span>
-                <Badge variant={selectedUserForPro.tier === 'pro' ? 'premium' : 'secondary'}>
-                  {selectedUserForPro.tier?.toUpperCase()}
-                </Badge>
-                {selectedUserForPro.pro_expires_at && (
-                  <span className="text-[11px] text-[#6B7280]">
-                    (Expires: {new Date(selectedUserForPro.pro_expires_at).toLocaleDateString()})
-                  </span>
-                )}
+            <form onSubmit={handleUpgradePro} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
+                <div className="p-3 bg-[#FFF5F0] rounded-xl border border-[#F95700]/30 text-xs space-y-1">
+                  <span className="text-[#6B7280] block">Target Account:</span>
+                  <strong className="text-sm text-[#111827] block truncate">
+                    {selectedUserForPro.email}
+                  </strong>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[#6B7280]">Current Tier:</span>
+                    <Badge variant={selectedUserForPro.tier === 'pro' ? 'premium' : 'secondary'}>
+                      {selectedUserForPro.tier?.toUpperCase()}
+                    </Badge>
+                    {selectedUserForPro.pro_expires_at && (
+                      <span className="text-[11px] text-[#6B7280]">
+                        (Expires: {new Date(selectedUserForPro.pro_expires_at).toLocaleDateString()})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <Input
+                  label="Duration (Days)"
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={proDays}
+                  onChange={(e) => setProDays(e.target.value)}
+                  required
+                />
+
+                <Input
+                  label="Reason / Note"
+                  placeholder="e.g. VIP Creator perk or Platform incentive"
+                  value={proReason}
+                  onChange={(e) => setProReason(e.target.value)}
+                />
               </div>
-            </div>
 
-            <form onSubmit={handleUpgradePro} className="space-y-4">
-              <Input
-                label="Duration (Days)"
-                type="number"
-                min="1"
-                max="365"
-                value={proDays}
-                onChange={(e) => setProDays(e.target.value)}
-                required
-              />
-
-              <Input
-                label="Reason / Note"
-                placeholder="e.g. VIP Creator perk or Platform incentive"
-                value={proReason}
-                onChange={(e) => setProReason(e.target.value)}
-              />
-
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="p-3 sm:p-3.5 border-t border-[#E5E7EB] bg-[#F7F7F8] flex items-center justify-end gap-2.5 shrink-0">
                 <Button
                   type="button"
                   variant="outline"
@@ -1425,7 +1429,7 @@ export default function AdminDashboardPage() {
                 </Button>
               </div>
             </form>
-          </Card>
+          </div>
         </div>
       )}
     </div>

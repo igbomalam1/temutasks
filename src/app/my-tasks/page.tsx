@@ -34,6 +34,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
+import { TaskCountdownTimer } from '@/components/tasks/TaskCountdownTimer';
 
 export default function MyTasksPage() {
   const { user, profile, wallet, refreshProfile } = useAuth();
@@ -360,14 +361,12 @@ export default function MyTasksPage() {
           </Link>
         </div>
 
-        {/* Nightly Review Notice */}
+        {/* Daily Admin Review Notice */}
         <div className="p-4 bg-[#FFF5F0] border border-[#F95700]/20 rounded-xl text-xs text-[#111827] flex items-start gap-3">
           <Clock className="w-4 h-4 text-[#F95700] shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Nightly Admin Review Notice:</strong> Pending submissions are reviewed by you.
-            Our admin team reviews unresolved submissions at night (11:00 PM Africa/Lagos). If a
-            submission remains unreviewed and qualifies under the platform's review policy, its
-            participant reward will be released automatically.
+            <strong>Daily Admin Review (10:00 AM Lagos):</strong> Pending submissions are reviewed by you.
+            Our admin team reviews unresolved submissions each morning at 10:00 AM Africa/Lagos. This gives tasks created early full overnight coverage before unreviewed eligible submissions are cleared automatically.
           </p>
         </div>
 
@@ -431,6 +430,7 @@ export default function MyTasksPage() {
                           {task.status.toUpperCase()}
                         </Badge>
                         {task.is_premium && <Badge variant="premium">PREMIUM</Badge>}
+                        <TaskCountdownTimer createdAt={task.created_at} />
                         <span className="text-xs font-bold text-[#10B981] bg-[#ECFDF5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
                           Reward: ₦{currentReward} / slot
                         </span>
@@ -659,10 +659,10 @@ export default function MyTasksPage() {
 
         {/* Decline / Reject Reason & Proof Modal */}
         {declineSubId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in">
-            <Card className="max-w-md w-full p-6 space-y-4 shadow-2xl">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-[#111827]">Reject Submission &amp; Upload Proof</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+              <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
+                <h3 className="text-sm sm:text-base font-bold text-[#111827]">Reject Submission &amp; Upload Proof</h3>
                 <button
                   type="button"
                   onClick={() => {
@@ -670,71 +670,73 @@ export default function MyTasksPage() {
                     setDeclineFile(null);
                     setDeclineFilePreview(null);
                   }}
-                  className="text-[#9CA3AF] hover:text-[#111827]"
+                  className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <p className="text-xs text-[#6B7280]">
-                To maintain fairness, you must state why you are rejecting this submission and upload a screenshot from your Temu app proving the user didn&apos;t qualify.
-              </p>
+              <form onSubmit={handleDecline} className="flex flex-col flex-1 overflow-hidden min-h-0">
+                <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
+                  <p className="text-xs text-[#6B7280]">
+                    To maintain fairness, you must state why you are rejecting this submission and upload a screenshot from your Temu app proving the user didn&apos;t qualify.
+                  </p>
 
-              <form onSubmit={handleDecline} className="space-y-4">
-                <Input
-                  label="Rejection Reason"
-                  placeholder="e.g. Invitation limit reached / User did not register"
-                  value={declineReason}
-                  onChange={(e) => setDeclineReason(e.target.value)}
-                  required
-                />
+                  <Input
+                    label="Rejection Reason"
+                    placeholder="e.g. Invitation limit reached / User did not register"
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    required
+                  />
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[#111827]">
-                    Proof Screenshot (Temu Record) <span className="text-[#EF4444]">*</span>
-                  </label>
-
-                  {declineFilePreview ? (
-                    <div className="relative rounded-xl border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={declineFilePreview}
-                        alt="Rejection Proof Preview"
-                        className="w-full max-h-48 object-contain rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDeclineFile(null);
-                          setDeclineFilePreview(null);
-                        }}
-                        className="absolute top-3 right-3 bg-red-600 text-white rounded-full p-1 shadow-md hover:bg-red-700"
-                        title="Remove image"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#D1D5DB] hover:border-[#F95700] rounded-xl p-4 cursor-pointer bg-[#F9FAFB] hover:bg-[#FFF5F0]/30 transition-all text-center">
-                      <UploadCloud className="w-8 h-8 text-[#9CA3AF] mb-1.5" />
-                      <span className="text-xs font-semibold text-[#111827]">
-                        Upload Proof Screenshot
-                      </span>
-                      <span className="text-[11px] text-[#6B7280] mt-0.5">
-                        PNG, JPG or WEBP (Max 5MB)
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        required
-                      />
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-[#111827]">
+                      Proof Screenshot (Temu Record) <span className="text-[#EF4444]">*</span>
                     </label>
-                  )}
+
+                    {declineFilePreview ? (
+                      <div className="relative rounded-xl border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={declineFilePreview}
+                          alt="Rejection Proof Preview"
+                          className="w-full max-h-40 sm:max-h-48 object-contain rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeclineFile(null);
+                            setDeclineFilePreview(null);
+                          }}
+                          className="absolute top-3 right-3 bg-red-600 text-white rounded-full p-1 shadow-md hover:bg-red-700"
+                          title="Remove image"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#D1D5DB] hover:border-[#F95700] rounded-xl p-3.5 sm:p-4 cursor-pointer bg-[#F9FAFB] hover:bg-[#FFF5F0]/30 transition-all text-center">
+                        <UploadCloud className="w-7 h-7 sm:w-8 sm:h-8 text-[#9CA3AF] mb-1" />
+                        <span className="text-xs font-semibold text-[#111827]">
+                          Upload Proof Screenshot
+                        </span>
+                        <span className="text-[11px] text-[#6B7280] mt-0.5">
+                          PNG, JPG or WEBP (Max 5MB)
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                          required
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2">
+                <div className="p-3 sm:p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] flex justify-end gap-2.5 shrink-0">
                   <Button
                     type="button"
                     variant="outline"
@@ -759,17 +761,17 @@ export default function MyTasksPage() {
                   </Button>
                 </div>
               </form>
-            </Card>
+            </div>
           </div>
         )}
 
         {/* View Proof Lightbox Modal */}
         {viewProofModal.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in">
-            <Card className="max-w-lg w-full p-6 space-y-4 shadow-2xl bg-white max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+              <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
                 <div>
-                  <h3 className="text-base font-bold text-[#111827]">Rejection Proof Screenshot</h3>
+                  <h3 className="text-sm sm:text-base font-bold text-[#111827]">Rejection Proof Screenshot</h3>
                   {viewProofModal.username && (
                     <p className="text-xs text-[#6B7280]">
                       User: <strong>{viewProofModal.username}</strong>
@@ -779,13 +781,13 @@ export default function MyTasksPage() {
                 <button
                   type="button"
                   onClick={() => setViewProofModal({ isOpen: false, reason: '' })}
-                  className="text-[#9CA3AF] hover:text-[#111827] p-1"
+                  className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
                 <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#991B1B]">
                   <span className="font-bold block mb-0.5">Stated Rejection Reason:</span>
                   <p>{viewProofModal.reason}</p>
@@ -799,7 +801,7 @@ export default function MyTasksPage() {
                       <img
                         src={viewProofModal.proofUrl}
                         alt="Rejection Proof"
-                        className="w-full max-h-[400px] object-contain rounded-lg mx-auto"
+                        className="w-full max-h-[45vh] sm:max-h-[350px] object-contain rounded-lg mx-auto"
                       />
                     </div>
                     <div className="text-right">
@@ -818,7 +820,7 @@ export default function MyTasksPage() {
                 )}
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-[#E5E7EB]">
+              <div className="p-3 sm:p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] flex justify-end shrink-0">
                 <Button
                   size="sm"
                   variant="outline"
@@ -827,7 +829,7 @@ export default function MyTasksPage() {
                   Close
                 </Button>
               </div>
-            </Card>
+            </div>
           </div>
         )}
 
@@ -856,18 +858,19 @@ export default function MyTasksPage() {
           const hasSufficientWallet = walletBalanceNaira >= topupCost;
 
           return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in">
-              <Card className="max-w-lg w-full p-6 space-y-4 shadow-2xl bg-white max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+              <div className="bg-white rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+                {/* Fixed Header */}
+                <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#FFF5F0] text-[#F95700] flex items-center justify-center">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#FFF5F0] text-[#F95700] flex items-center justify-center shrink-0">
                       <TrendingUp className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-[#111827]">
+                      <h3 className="text-sm sm:text-base font-bold text-[#111827]">
                         Increase Task Reward
                       </h3>
-                      <p className="text-xs text-[#6B7280]">
+                      <p className="text-[11px] sm:text-xs text-[#6B7280]">
                         Boost payouts to attract more users to complete your task faster
                       </p>
                     </div>
@@ -878,156 +881,160 @@ export default function MyTasksPage() {
                       setIncreaseRewardTask(null);
                       setIncreaseError('');
                     }}
-                    className="text-[#9CA3AF] hover:text-[#111827] p-1"
+                    className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Locked Link Notice */}
-                <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] text-xs space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-[#111827]">
-                    <Lock className="w-3.5 h-3.5 text-[#6B7280]" />
-                    <span>Invitation Link (Locked)</span>
-                  </div>
-                  <p className="font-mono text-[#4B5563] truncate text-[11px] bg-white p-1.5 rounded border border-[#E5E7EB]">
-                    {increaseRewardTask.invitation_link}
-                  </p>
-                  <p className="text-[11px] text-[#6B7280]">
-                    Task link cannot be edited to maintain invite verification integrity.
-                  </p>
-                </div>
-
-                {/* Current Stats */}
-                <div className="grid grid-cols-3 gap-2.5 text-center text-xs">
-                  <div className="p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                    <span className="text-[11px] text-[#6B7280] block">Current Slot Cost</span>
-                    <strong className="text-sm text-[#111827]">₦{currentPrice}</strong>
-                  </div>
-                  <div className="p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                    <span className="text-[11px] text-[#6B7280] block">Current Reward</span>
-                    <strong className="text-sm text-[#10B981]">₦{currentReward}</strong>
-                  </div>
-                  <div className="p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                    <span className="text-[11px] text-[#6B7280] block">Remaining Slots</span>
-                    <strong className="text-sm text-[#F95700]">{remainingSlots}</strong>
-                  </div>
-                </div>
-
-                <form onSubmit={handleIncreaseReward} className="space-y-4">
-                  {/* New Price Input */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#111827] mb-1">
-                      New Total Price per Participant (₦)
-                    </label>
-                    <Input
-                      type="number"
-                      min={currentPrice + 5}
-                      step={5}
-                      value={newRewardPrice}
-                      onChange={(e) =>
-                        setNewRewardPrice(e.target.value === '' ? '' : Number(e.target.value))
-                      }
-                      placeholder={`e.g. ${currentPrice + 20}`}
-                      required
-                      className="font-bold text-base"
-                    />
-                    <span className="text-[11px] text-[#6B7280] mt-1 block">
-                      Must be higher than current price (₦{currentPrice}). Higher rewards appear top in task listings.
-                    </span>
-                  </div>
-
-                  {/* Live Top-up Calculation Box */}
-                  {priceNum > currentPrice && (
-                    <div className="p-3.5 bg-[#FFF5F0] border border-[#F95700]/30 rounded-xl space-y-2 text-xs">
-                      <div className="flex justify-between items-center text-[#4B5563]">
-                        <span>Price Increase per Slot:</span>
-                        <span className="font-bold text-[#F95700]">+₦{priceDiff}</span>
+                <form onSubmit={handleIncreaseReward} className="flex flex-col flex-1 overflow-hidden min-h-0">
+                  {/* Scrollable Body */}
+                  <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
+                    {/* Locked Link Notice */}
+                    <div className="p-2.5 sm:p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-[#111827]">
+                        <Lock className="w-3.5 h-3.5 text-[#6B7280]" />
+                        <span>Invitation Link (Locked)</span>
                       </div>
-                      <div className="flex justify-between items-center text-[#4B5563]">
-                        <span>Remaining Slots to Top-up:</span>
-                        <span className="font-bold text-[#111827]">{remainingSlots} slots</span>
+                      <p className="font-mono text-[#4B5563] truncate text-[11px] bg-white p-1.5 rounded border border-[#E5E7EB]">
+                        {increaseRewardTask.invitation_link}
+                      </p>
+                      <p className="text-[10px] sm:text-[11px] text-[#6B7280]">
+                        Task link cannot be edited to maintain invite verification integrity.
+                      </p>
+                    </div>
+
+                    {/* Current Stats */}
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="p-2 sm:p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                        <span className="text-[10px] sm:text-[11px] text-[#6B7280] block">Current Slot Cost</span>
+                        <strong className="text-xs sm:text-sm text-[#111827]">₦{currentPrice}</strong>
                       </div>
-                      <div className="flex justify-between items-center text-[#4B5563]">
-                        <span>New Participant Reward:</span>
-                        <span className="font-bold text-[#10B981]">₦{newParticipantReward} / slot</span>
+                      <div className="p-2 sm:p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                        <span className="text-[10px] sm:text-[11px] text-[#6B7280] block">Current Reward</span>
+                        <strong className="text-xs sm:text-sm text-[#10B981]">₦{currentReward}</strong>
                       </div>
-                      <div className="pt-2 border-t border-[#F95700]/20 flex justify-between items-center text-sm font-black text-[#111827]">
-                        <span>Total Top-up Payment:</span>
-                        <span className="text-[#F95700] text-base">₦{topupCost.toLocaleString()}</span>
+                      <div className="p-2 sm:p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                        <span className="text-[10px] sm:text-[11px] text-[#6B7280] block">Remaining Slots</span>
+                        <strong className="text-xs sm:text-sm text-[#F95700]">{remainingSlots}</strong>
                       </div>
                     </div>
-                  )}
 
-                  {/* Payment Method Selector */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-[#111827]">
-                      Select Payment Method for Top-up:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setRewardPaymentMethod('wallet')}
-                        className={`p-3 rounded-xl border text-left transition-all ${
-                          rewardPaymentMethod === 'wallet'
-                            ? 'border-[#F95700] bg-[#FFF5F0] ring-2 ring-[#F95700]/20'
-                            : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <Wallet
-                            className={`w-4 h-4 ${
-                              rewardPaymentMethod === 'wallet' ? 'text-[#F95700]' : 'text-[#6B7280]'
-                            }`}
-                          />
-                          <span className="text-xs font-bold text-[#111827]">Wallet Balance</span>
+                    {/* New Price Input */}
+                    <div>
+                      <label className="block text-xs font-bold text-[#111827] mb-1">
+                        New Total Price per Participant (₦)
+                      </label>
+                      <Input
+                        type="number"
+                        min={currentPrice + 5}
+                        step={5}
+                        value={newRewardPrice}
+                        onChange={(e) =>
+                          setNewRewardPrice(e.target.value === '' ? '' : Number(e.target.value))
+                        }
+                        placeholder={`e.g. ${currentPrice + 20}`}
+                        required
+                        className="font-bold text-sm sm:text-base"
+                      />
+                      <span className="text-[10px] sm:text-[11px] text-[#6B7280] mt-1 block">
+                        Must be higher than current price (₦{currentPrice}). Higher rewards appear top in task listings.
+                      </span>
+                    </div>
+
+                    {/* Live Top-up Calculation Box */}
+                    {priceNum > currentPrice && (
+                      <div className="p-3 sm:p-3.5 bg-[#FFF5F0] border border-[#F95700]/30 rounded-xl space-y-1.5 text-xs">
+                        <div className="flex justify-between items-center text-[#4B5563]">
+                          <span>Price Increase per Slot:</span>
+                          <span className="font-bold text-[#F95700]">+₦{priceDiff}</span>
                         </div>
-                        <span className="text-[11px] block text-[#6B7280]">
-                          Available: <strong>₦{walletBalanceNaira.toLocaleString()}</strong>
-                        </span>
-                        {!hasSufficientWallet && priceNum > currentPrice && (
-                          <span className="text-[10px] text-[#EF4444] font-semibold mt-0.5 block">
-                            Insufficient balance
+                        <div className="flex justify-between items-center text-[#4B5563]">
+                          <span>Remaining Slots to Top-up:</span>
+                          <span className="font-bold text-[#111827]">{remainingSlots} slots</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[#4B5563]">
+                          <span>New Participant Reward:</span>
+                          <span className="font-bold text-[#10B981]">₦{newParticipantReward} / slot</span>
+                        </div>
+                        <div className="pt-2 border-t border-[#F95700]/20 flex justify-between items-center text-xs sm:text-sm font-black text-[#111827]">
+                          <span>Total Top-up Payment:</span>
+                          <span className="text-[#F95700] text-sm sm:text-base">₦{topupCost.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Method Selector */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-[#111827]">
+                        Select Payment Method for Top-up:
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setRewardPaymentMethod('wallet')}
+                          className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all ${
+                            rewardPaymentMethod === 'wallet'
+                              ? 'border-[#F95700] bg-[#FFF5F0] ring-2 ring-[#F95700]/20'
+                              : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Wallet
+                              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                                rewardPaymentMethod === 'wallet' ? 'text-[#F95700]' : 'text-[#6B7280]'
+                              }`}
+                            />
+                            <span className="text-xs font-bold text-[#111827]">Wallet</span>
+                          </div>
+                          <span className="text-[10px] sm:text-[11px] block text-[#6B7280]">
+                            Avail: <strong>₦{walletBalanceNaira.toLocaleString()}</strong>
                           </span>
-                        )}
-                      </button>
+                          {!hasSufficientWallet && priceNum > currentPrice && (
+                            <span className="text-[10px] text-[#EF4444] font-semibold mt-0.5 block">
+                              Insufficient
+                            </span>
+                          )}
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setRewardPaymentMethod('novac')}
-                        className={`p-3 rounded-xl border text-left transition-all ${
-                          rewardPaymentMethod === 'novac'
-                            ? 'border-[#F95700] bg-[#FFF5F0] ring-2 ring-[#F95700]/20'
-                            : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <CreditCard
-                            className={`w-4 h-4 ${
-                              rewardPaymentMethod === 'novac' ? 'text-[#F95700]' : 'text-[#6B7280]'
-                            }`}
-                          />
-                          <span className="text-xs font-bold text-[#111827]">Novac Gateway</span>
-                        </div>
-                        <span className="text-[11px] block text-[#6B7280]">
-                          OPay, Cards &amp; Transfer
-                        </span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => setRewardPaymentMethod('novac')}
+                          className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all ${
+                            rewardPaymentMethod === 'novac'
+                              ? 'border-[#F95700] bg-[#FFF5F0] ring-2 ring-[#F95700]/20'
+                              : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <CreditCard
+                              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                                rewardPaymentMethod === 'novac' ? 'text-[#F95700]' : 'text-[#6B7280]'
+                              }`}
+                            />
+                            <span className="text-xs font-bold text-[#111827]">Novac Gateway</span>
+                          </div>
+                          <span className="text-[10px] sm:text-[11px] block text-[#6B7280]">
+                            OPay, Cards &amp; Transfer
+                          </span>
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Fair Reward Rule Callout */}
+                    <div className="p-2.5 sm:p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl text-[10px] sm:text-[11px] text-[#166534] leading-relaxed">
+                      💡 <strong>Fair Payout Policy:</strong> Only participants completing the task after this increase will receive the higher reward of <strong>₦{newParticipantReward}</strong>. Previous submissions retain their locked original amount.
+                    </div>
+
+                    {increaseError && (
+                      <div className="p-2.5 sm:p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#DC2626]">
+                        {increaseError}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Fair Reward Rule Callout */}
-                  <div className="p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl text-[11px] text-[#166534] leading-relaxed">
-                    💡 <strong>Fair Payout Policy:</strong> Only participants completing the task after this increase will receive the higher reward of <strong>₦{newParticipantReward}</strong>. Previous submissions retain their locked original amount.
-                  </div>
-
-                  {increaseError && (
-                    <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#DC2626]">
-                      {increaseError}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E7EB]">
+                  {/* Sticky Footer */}
+                  <div className="p-3 sm:p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-end gap-2.5 shrink-0">
                     <Button
                       type="button"
                       variant="outline"
@@ -1056,7 +1063,7 @@ export default function MyTasksPage() {
                     </Button>
                   </div>
                 </form>
-              </Card>
+              </div>
             </div>
           );
         })()}

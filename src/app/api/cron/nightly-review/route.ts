@@ -5,9 +5,10 @@ import { executeWalletTransaction } from '@/lib/wallet';
 import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
 /**
- * Scheduled Nightly Admin Review Route
- * Default: Africa/Lagos 11:00 PM cutoff
- * Auto-approves unreviewed submissions that satisfy platform eligibility rules
+ * Scheduled Daily Admin Review Route
+ * Default: Africa/Lagos 10:00 AM review
+ * Auto-approves unreviewed submissions that satisfy platform eligibility rules,
+ * giving creators overnight coverage for early tasks before auto-clearing.
  */
 export async function POST(request: Request) {
   try {
@@ -153,8 +154,8 @@ export async function POST(request: Request) {
         // 5. In-app notification
         await adminSupabase.from('temutask_notifications').insert({
           user_id: participantId,
-          title: 'Nightly Review Approval! 🎉',
-          message: `Your submission for task "${task.title}" was cleared and credited by nightly admin review.`,
+          title: 'Daily Review Approval! 🎉',
+          message: `Your submission for task "${task.title}" was cleared and credited by the 10:00 AM daily administrator review.`,
           type: 'submission_approved',
           link: '/wallet',
         });
@@ -163,8 +164,8 @@ export async function POST(request: Request) {
         const participantEmail = sub.temutask_profiles?.email;
         if (participantEmail) {
           const emailHtml = renderEmailTemplate({
-            title: 'Task Approved! (Nightly Review Clearance) 🎉',
-            contentHtml: `<p>Good news! Your submission for <strong>${task.title}</strong> was automatically cleared by nightly admin review.</p>
+            title: 'Task Approved! (Daily Admin Review Clearance) 🎉',
+            contentHtml: `<p>Good news! Your submission for <strong>${task.title}</strong> was automatically cleared by the 10:00 AM daily administrator review.</p>
             <p><strong>Reward Credited:</strong> ₦${(Number(rewardKobo) / 100).toFixed(2)}<br>
             <strong>Reference:</strong> ${rewardResult.reference}</p>
             <p>Your wallet has been credited and is available for instant airtime or withdrawal.</p>`,
@@ -176,8 +177,8 @@ export async function POST(request: Request) {
             to: participantEmail,
             subject: `[TemuTasks] Task Approved! ₦${(Number(rewardKobo) / 100).toFixed(2)} Credited`,
             html: emailHtml,
-            eventType: 'nightly_auto_approval',
-          }).catch((e) => console.error('Nightly review email error:', e));
+            eventType: 'daily_auto_approval',
+          }).catch((e) => console.error('Daily review email error:', e));
         }
 
         approvedCount++;

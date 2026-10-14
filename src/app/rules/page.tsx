@@ -22,13 +22,12 @@ export default function RulesPage() {
           <div className="space-y-5 text-xs text-[#4B5563] leading-relaxed">
             <div className="p-4 bg-[#FFF5F0] rounded-xl border border-[#F95700]/20 space-y-1">
               <div className="flex items-center gap-2 font-bold text-[#F95700]">
-                <Clock className="w-4 h-4" /> Nightly Admin Clearance Policy
+                <Clock className="w-4 h-4" /> Daily 10:00 AM Admin Clearance Policy
               </div>
               <p>
                 “Pending submissions are reviewed by the task owner. Our admin team reviews unresolved
-                submissions at night (11:00 PM Africa/Lagos). If a submission remains unresolved and
-                qualifies under the platform's review policy, its participant reward will be released
-                automatically.”
+                submissions daily at 10:00 AM Africa/Lagos. This gives task creators overnight coverage
+                to verify participants before unreviewed eligible submissions are cleared automatically.”
               </p>
             </div>
 

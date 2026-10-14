@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import { toPng, toBlob } from 'html-to-image';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
 import { formatNaira } from '@/lib/utils';
@@ -19,6 +20,7 @@ import {
   Sparkles,
   Wallet,
   Receipt,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export interface TransactionReceiptData {
@@ -49,6 +51,8 @@ export const TransactionReceiptModal: React.FC<TransactionReceiptModalProps> = (
 }) => {
   const [copied, setCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen || !tx) return null;
@@ -153,69 +157,96 @@ export const TransactionReceiptModal: React.FC<TransactionReceiptModalProps> = (
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  // Download crisp 2x PNG image of the exact receipt ticket
+  const handleDownloadImage = async () => {
+    if (!receiptRef.current) return;
+    try {
+      setIsDownloading(true);
+      const dataUrl = await toPng(receiptRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
+      const link = document.createElement('a');
+      link.download = `temutasks-receipt-${tx.reference}.png`;
+      link.href = dataUrl;
+      link.click();
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2500);
+    } catch (err) {
+      console.error('Failed to export receipt image:', err);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
+  // Share actual receipt image via Web Share API Level 2 (files) or fallback
   const handleShare = async () => {
+    if (!receiptRef.current) return;
     setIsSharing(true);
-    const shareText = `📄 TemuTasks Transaction Receipt\nRef: ${tx.reference}\nType: ${details.title}\nAmount: ${amountFormatted}\nDate: ${tx.date}\nStatus: Verified\nVerify on: https://temutasks.top/wallet`;
+    try {
+      const blob = await toBlob(receiptRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
 
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
+      if (!blob) throw new Error('Could not generate receipt image');
+
+      const file = new File([blob], `receipt-${tx.reference}.png`, { type: 'image/png' });
+
+      // Check if navigator.canShare supports files (mobile Chrome, Safari, etc.)
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: `TemuTasks Receipt — ${details.title} (${amountFormatted})`,
-          text: shareText,
-          url: 'https://temutasks.top',
+          files: [file],
+          title: `TemuTasks Receipt #${tx.reference}`,
+          text: `Official Transaction Receipt: ${details.title} (${amountFormatted}) on TemuTasks.`,
         });
-      } catch {
-        // cancelled
+      } else {
+        // Fallback for desktop browsers:
+        // 1. Download image
+        const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
+        const link = document.createElement('a');
+        link.download = `temutasks-receipt-${tx.reference}.png`;
+        link.href = dataUrl;
+        link.click();
+
+        // 2. Try copying image directly to clipboard if supported
+        if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } catch {
+            // ignore
+          }
+        }
+
+        // 3. Open WhatsApp with formatted verification
+        const shareText = `📄 TemuTasks Receipt #${tx.reference}\n${details.title} — ${amountFormatted}\n(Receipt image downloaded to your device)\nVerify at https://temutasks.top`;
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+        window.open(whatsappUrl, '_blank');
       }
-    } else {
-      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-      window.open(whatsappUrl, '_blank');
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        console.error('Error sharing receipt:', err);
+        handleDownloadImage();
+      }
+    } finally {
+      setIsSharing(false);
     }
-    setIsSharing(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
-      {/* Printable Receipt Isolation Style */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-tx-receipt,
-          #printable-tx-receipt * {
-            visibility: visible;
-          }
-          #printable-tx-receipt {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 24px;
-            box-shadow: none !important;
-            border: 1px solid #e5e7eb !important;
-            background: #ffffff !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
-
-      <div className="max-w-md w-full space-y-4 my-auto">
-        {/* Printable Ticket Receipt */}
-        <div
-          id="printable-tx-receipt"
-          ref={receiptRef}
-          className="bg-white rounded-2xl shadow-2xl border border-[#E5E7EB] overflow-hidden relative"
-        >
-          {/* Header Brand Bar */}
-          <div className="bg-[#111827] text-white p-5 flex items-center justify-between border-b border-white/10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col my-auto">
+        {/* Scrollable Printable Ticket Receipt */}
+        <div className="flex-1 overflow-y-auto rounded-2xl shadow-2xl border border-[#E5E7EB] bg-white">
+          <div
+            id="printable-tx-receipt"
+            ref={receiptRef}
+            className="bg-white overflow-hidden relative"
+          >
+            {/* Header Brand Bar */}
+            <div className="bg-[#111827] text-white p-4 sm:p-5 flex items-center justify-between border-b border-white/10">
             <div className="flex items-center gap-3">
               <Logo size="sm" showText={false} />
               <div>
@@ -434,21 +465,29 @@ export const TransactionReceiptModal: React.FC<TransactionReceiptModalProps> = (
                 Support: <a href="mailto:support@temutasks.top" className="text-[#F95700] hover:underline">support@temutasks.top</a>
               </p>
             </div>
+            </div>
           </div>
         </div>
 
-        {/* Modal Buttons (Hidden in Print) */}
-        <div className="no-print space-y-2">
-          <div className="grid grid-cols-2 gap-2.5">
+        {/* Modal Buttons (Pinned / Sticky at Bottom) */}
+        <div className="space-y-2 pt-2.5 sm:pt-3 shrink-0">
+          <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
               variant="primary"
               size="md"
-              onClick={handlePrint}
-              leftIcon={<Download className="w-4 h-4" />}
-              className="w-full text-xs font-bold shadow-md"
+              onClick={handleDownloadImage}
+              isLoading={isDownloading}
+              leftIcon={
+                downloadSuccess ? (
+                  <Check className="w-4 h-4 text-white" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )
+              }
+              className="w-full text-xs font-bold shadow-md bg-[#F95700] hover:bg-[#E04E00] text-white"
             >
-              Download / Save PDF
+              {downloadSuccess ? 'Image Saved!' : 'Download Image'}
             </Button>
 
             <Button
@@ -458,9 +497,9 @@ export const TransactionReceiptModal: React.FC<TransactionReceiptModalProps> = (
               onClick={handleShare}
               leftIcon={<Share2 className="w-4 h-4" />}
               isLoading={isSharing}
-              className="w-full text-xs font-bold bg-white"
+              className="w-full text-xs font-bold bg-white text-[#111827] hover:border-[#F95700]"
             >
-              Share Receipt
+              Share Image
             </Button>
           </div>
 
@@ -485,7 +524,7 @@ export const TransactionReceiptModal: React.FC<TransactionReceiptModalProps> = (
               variant="secondary"
               size="sm"
               onClick={onClose}
-              className="flex-1 text-xs font-semibold"
+              className="flex-1 text-xs font-semibold bg-[#111827] hover:bg-[#1F2937] text-white"
             >
               Close
             </Button>

@@ -442,114 +442,119 @@ export default function DashboardPage() {
         {/* Welcome Bonus Celebration Popup Modal */}
         {showWelcomeModal && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in"
             onClick={dismissWelcomeModal}
           >
             <div
-              className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl relative border border-[#E5E7EB] animate-in zoom-in-95 duration-200"
+              className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
               <button
                 onClick={dismissWelcomeModal}
-                className="absolute top-4 right-4 p-1.5 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
+                className="absolute top-3.5 right-3.5 z-10 p-1.5 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
                 title="Close"
                 aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              {/* Header / Celebration Icon */}
-              <div className="text-center space-y-2">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#FFF5F0] to-[#FFE8DC] border border-[#F95700]/30 flex items-center justify-center text-[#F95700] shadow-sm">
-                  <Gift className="w-7 h-7" />
-                </div>
+              {/* Scrollable Body */}
+              <div className="overflow-y-auto p-4 sm:p-6 space-y-3.5 sm:space-y-4">
+                {/* Header / Celebration Icon */}
+                <div className="text-center space-y-1.5 pt-1">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 mx-auto rounded-xl bg-gradient-to-br from-[#FFF5F0] to-[#FFE8DC] border border-[#F95700]/30 flex items-center justify-center text-[#F95700] shadow-xs">
+                    <Gift className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
 
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF5F0] border border-[#F95700]/30 text-[#F95700] text-xs font-extrabold uppercase tracking-wider">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  ₦25 Welcome Bonus
-                </div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FFF5F0] border border-[#F95700]/30 text-[#F95700] text-[11px] font-extrabold uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3" />
+                    ₦25 Welcome Bonus
+                  </div>
 
-                <h2 className="text-xl sm:text-2xl font-black text-[#111827] tracking-tight">
-                  Welcome to TemuTasks!
-                </h2>
+                  <h2 className="text-lg sm:text-xl font-black text-[#111827] tracking-tight">
+                    Welcome to TemuTasks!
+                  </h2>
 
-                <p className="text-xs sm:text-sm text-[#4B5563] leading-relaxed">
-                  You received <strong>₦25 instant welcome bonus</strong> on registration. It is active in your available wallet balance right now!
-                </p>
-              </div>
-
-              {/* Platform Feature Summary */}
-              <div className="p-3.5 rounded-xl bg-[#F7F7F8] border border-[#E5E7EB] text-xs text-[#4B5563] space-y-1.5">
-                <div className="flex items-center gap-2 font-bold text-[#111827]">
-                  <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />
-                  <span>Earn cash doing tasks or promote your links</span>
-                </div>
-                <p className="text-[11px] text-[#6B7280] leading-relaxed pl-6">
-                  Complete quick invitation tasks to earn real cash, or create tasks to reach thousands of Nigerians. Cash out straight to OPay/PalmPay or buy cheap airtime!
-                </p>
-              </div>
-
-              {/* Referral Earning Booster Box */}
-              <div className="p-4 rounded-xl bg-gradient-to-br from-[#FFF5F0] to-[#FFFBEB] border border-[#F95700]/25 space-y-3">
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#F95700] flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5" />
-                    Refer &amp; Earn Additional ₦25 Cash
-                  </span>
-                  <p className="text-xs text-[#4B5563] leading-relaxed">
-                    Earn an extra <strong>₦25 instant bonus</strong> when your friend completes their first task, plus <strong>continuous lifetime commissions</strong> on every task they ever complete!
+                  <p className="text-xs sm:text-sm text-[#4B5563] leading-relaxed">
+                    You received <strong>₦25 instant welcome bonus</strong> on registration. It is active in your available wallet balance right now!
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div
-                    onClick={copyReferralLink}
-                    title="Click to copy invite message"
-                    className="flex-1 bg-white px-3 py-2 rounded-lg border border-[#E5E7EB] text-[11px] font-mono text-[#111827] truncate cursor-pointer hover:border-[#F95700] select-all"
-                  >
-                    {referralUrl || 'Generating referral link...'}
+                {/* Platform Feature Summary */}
+                <div className="p-3 rounded-xl bg-[#F7F7F8] border border-[#E5E7EB] text-xs text-[#4B5563] space-y-1">
+                  <div className="flex items-center gap-2 font-bold text-[#111827]">
+                    <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />
+                    <span>Earn cash doing tasks or promote your links</span>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={copied ? 'primary' : 'outline'}
-                    onClick={copyReferralLink}
-                    className="shrink-0 text-xs"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-white mr-1" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 mr-1" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
+                  <p className="text-[11px] text-[#6B7280] leading-relaxed pl-6">
+                    Complete quick invitation tasks to earn real cash, or create tasks to reach thousands of Nigerians. Cash out straight to OPay/PalmPay or buy cheap airtime!
+                  </p>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={shareReferral}
-                  className="w-full text-xs font-bold bg-[#F95700] hover:bg-[#E04E00] text-white flex items-center justify-center gap-1.5 shadow-xs"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  Share Referral Link on WhatsApp
-                </Button>
+                {/* Referral Earning Booster Box */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-br from-[#FFF5F0] to-[#FFFBEB] border border-[#F95700]/25 space-y-2.5">
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#F95700] flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5" />
+                      Refer &amp; Earn Additional ₦25 Cash
+                    </span>
+                    <p className="text-xs text-[#4B5563] leading-relaxed">
+                      Earn an extra <strong>₦25 instant bonus</strong> when your friend completes their first task, plus <strong>continuous lifetime commissions</strong> on every task they ever complete!
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div
+                      onClick={copyReferralLink}
+                      title="Click to copy invite message"
+                      className="flex-1 bg-white px-2.5 py-1.5 rounded-lg border border-[#E5E7EB] text-[11px] font-mono text-[#111827] truncate cursor-pointer hover:border-[#F95700] select-all"
+                    >
+                      {referralUrl || 'Generating referral link...'}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={copied ? 'primary' : 'outline'}
+                      onClick={copyReferralLink}
+                      className="shrink-0 text-xs px-2.5 py-1 h-8"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-white mr-1" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 mr-1" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={shareReferral}
+                    className="w-full text-xs font-bold bg-[#F95700] hover:bg-[#E04E00] text-white flex items-center justify-center gap-1.5 shadow-xs py-2 h-auto"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    Share Referral Link on WhatsApp
+                  </Button>
+                </div>
               </div>
 
-              {/* Primary Dismiss Button */}
-              <Button
-                size="lg"
-                variant="secondary"
-                onClick={dismissWelcomeModal}
-                className="w-full font-bold text-sm bg-[#111827] hover:bg-[#1F2937] text-white shadow-md"
-              >
-                Start Earning Now →
-              </Button>
+              {/* Sticky Action Footer */}
+              <div className="p-3 sm:p-4 border-t border-[#E5E7EB] bg-[#F7F7F8] shrink-0">
+                <Button
+                  size="md"
+                  variant="secondary"
+                  onClick={dismissWelcomeModal}
+                  className="w-full font-bold text-xs sm:text-sm bg-[#111827] hover:bg-[#1F2937] text-white shadow-xs"
+                >
+                  Start Earning Now →
+                </Button>
+              </div>
             </div>
           </div>
         )}

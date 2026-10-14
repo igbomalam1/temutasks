@@ -43,9 +43,9 @@ export function StatusModal({
   return (
     <div
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
     >
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-6 sm:p-7 border border-[#E5E7EB] text-center space-y-5 animate-in zoom-in-95 duration-200 relative">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-5 sm:p-7 border border-[#E5E7EB] text-center space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200 relative max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] overflow-y-auto my-auto">
         {/* Close Button if not loading */}
         {type !== 'loading' && onClose && (
           <button

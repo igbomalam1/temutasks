@@ -21,8 +21,10 @@ import {
   Share2,
   Eye,
   X,
+  Clock,
 } from 'lucide-react';
 import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
+import { TaskCountdownTimer } from '@/components/tasks/TaskCountdownTimer';
 
 export default function AvailableTasksPage() {
   const { user, profile, signInWithGoogle } = useAuth();
@@ -547,8 +549,8 @@ export default function AvailableTasksPage() {
                   }`}
                 >
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {isPro && isEligible && (
                           <input
                             type="checkbox"
@@ -568,9 +570,7 @@ export default function AvailableTasksPage() {
                           </Badge>
                         )}
                       </div>
-                      <span className="text-xs text-[#9CA3AF]">
-                        {new Date(task.created_at).toLocaleDateString()}
-                      </span>
+                      <TaskCountdownTimer createdAt={task.created_at} />
                     </div>
 
                     <h3 className="text-base font-bold text-[#111827] line-clamp-1">
@@ -724,136 +724,152 @@ export default function AvailableTasksPage() {
 
         {/* Single or Multi-Task Submission Modal */}
         {(selectedTask || isBatchModalOpen) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
-            <Card className="max-w-md w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-                <h3 className="text-lg font-bold text-[#111827]">
-                  {isBatchModalOpen
-                    ? `Batch Submit ${batchTaskIds.length} Tasks at Once`
-                    : 'Complete Temu Task'}
-                </h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+              {/* Sticky Header */}
+              <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-[#111827]">
+                    {isBatchModalOpen
+                      ? `Batch Submit (${batchTaskIds.length} Tasks)`
+                      : 'Complete Temu Task'}
+                  </h3>
+                  {selectedTask && (
+                    <TaskCountdownTimer createdAt={selectedTask.created_at} variant="compact" />
+                  )}
+                </div>
                 <button
                   onClick={handleCloseModal}
-                  className="text-[#9CA3AF] hover:text-[#111827] text-lg font-bold"
+                  className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="bg-[#FFF5F0] p-3.5 rounded-xl border border-[#F95700]/25 text-xs text-[#111827] space-y-2.5">
-                <div className="font-bold flex items-center gap-1.5 text-[#F95700]">
-                  <AlertCircle className="w-4 h-4" /> Task Instructions:
-                </div>
-                {isBatchModalOpen ? (
-                  <div className="space-y-1.5 text-xs text-[#374151]">
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
-                      <span>Enter your Temu account username &amp; email below to submit for all <strong>{batchTaskIds.length} tasks</strong> at once.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
-                      <span>After submitting, click each task&apos;s Temu invitation link to accept the invites in your Temu app.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
-                      <span>Earn a combined <strong className="text-[#10B981]">{formatNaira(totalBatchRewardKobo)}</strong> once verified!</span>
-                    </div>
+              {/* Scrollable Body */}
+              <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
+                <div className="bg-[#FFF5F0] p-3 sm:p-3.5 rounded-xl border border-[#F95700]/25 text-xs text-[#111827] space-y-2">
+                  <div className="font-bold flex items-center gap-1.5 text-[#F95700]">
+                    <AlertCircle className="w-4 h-4" /> Task Instructions:
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="leading-relaxed bg-white/80 p-2.5 rounded-lg border border-[#F95700]/15 text-[#374151]">
-                      {parseTaskTitleAndInstructions(selectedTask?.title).instructions}
-                    </p>
-                    <div className="grid grid-cols-1 gap-1 text-[11px] text-[#4B5563]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[9px] font-bold shrink-0">1</span>
-                        <span>Click the link &amp; open in Temu app. Make sure to accept the invite.</span>
+                  {isBatchModalOpen ? (
+                    <div className="space-y-1.5 text-xs text-[#374151]">
+                      <div className="flex items-start gap-2">
+                        <span className="w-4 h-4 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                        <span>Enter your Temu account username &amp; email below to submit for all <strong>{batchTaskIds.length} tasks</strong> at once.</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[9px] font-bold shrink-0">2</span>
-                        <span>Submit your Temu name &amp; email below for verification.</span>
+                      <div className="flex items-start gap-2">
+                        <span className="w-4 h-4 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                        <span>After submitting, click each task&apos;s Temu invitation link to accept the invites in your Temu app.</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[9px] font-bold shrink-0">3</span>
-                        <span>Earn <strong className="text-[#10B981]">{selectedTask && formatNaira(BigInt(selectedTask.reward_per_participant_kobo))}</strong> upon verification!</span>
+                      <div className="flex items-start gap-2">
+                        <span className="w-4 h-4 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                        <span>Earn a combined <strong className="text-[#10B981]">{formatNaira(totalBatchRewardKobo)}</strong> once verified!</span>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {errorMsg && (
-                <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-xs text-[#DC2626]">
-                  {errorMsg}
-                </div>
-              )}
-
-              {successMsg && (
-                <div className="p-3 bg-[#ECFDF5] border border-[#A7F3D0] rounded-lg text-xs text-[#059669] space-y-2">
-                  <p className="font-semibold">{successMsg}</p>
-                  {submittedLinks.length > 0 && (
-                    <div className="space-y-1.5 pt-2 border-t border-[#A7F3D0]">
-                      <span className="block text-[11px] font-bold text-[#047857]">
-                        Click each link below to accept the Temu invitation:
-                      </span>
-                      {submittedLinks.map((item, idx) => (
-                        <a
-                          key={item.taskId}
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-2 rounded bg-white border border-[#A7F3D0] text-[#111827] hover:border-[#F95700] text-xs font-semibold"
-                        >
-                          <span className="truncate">
-                            {idx + 1}. {item.title} ({formatNaira(BigInt(item.rewardKobo))})
-                          </span>
-                          <ExternalLink className="w-3.5 h-3.5 text-[#F95700] shrink-0 ml-2" />
-                        </a>
-                      ))}
+                  ) : (
+                    <div className="space-y-1.5">
+                      <p className="leading-relaxed bg-white/80 p-2 sm:p-2.5 rounded-lg border border-[#F95700]/15 text-[#374151] text-xs">
+                        {parseTaskTitleAndInstructions(selectedTask?.title).instructions}
+                      </p>
+                      <div className="grid grid-cols-1 gap-1 text-[11px] text-[#4B5563]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3.5 h-3.5 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[9px] font-bold shrink-0">1</span>
+                          <span>Click the link &amp; open in Temu app. Make sure to accept the invite.</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3.5 h-3.5 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[9px] font-bold shrink-0">2</span>
+                          <span>Submit your Temu name &amp; email below for verification.</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3.5 h-3.5 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[9px] font-bold shrink-0">3</span>
+                          <span>Earn <strong className="text-[#10B981]">{selectedTask && formatNaira(BigInt(selectedTask.reward_per_participant_kobo))}</strong> upon verification!</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
 
-              {submittedLinks.length === 0 ? (
-                !user ? (
-                  <div className="p-4 bg-[#F7F7F8] rounded-xl text-center space-y-3">
-                    <p className="text-xs text-[#6B7280]">
-                      Sign in to submit your Temu account info and receive your payout directly into your wallet!
-                    </p>
-                    <Button
-                      size="md"
-                      variant="primary"
-                      className="w-full"
-                      onClick={() =>
-                        signInWithGoogle(
-                          selectedTask ? `/tasks?taskId=${selectedTask.id}` : '/tasks'
-                        )
-                      }
-                    >
-                      Sign In with Google to Complete Task
-                    </Button>
+                {errorMsg && (
+                  <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-xs text-[#DC2626]">
+                    {errorMsg}
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmitTask} className="space-y-4">
-                    <Input
-                      label="Your Temu Profile Name"
-                      placeholder="e.g. JohnD or TemuUser_82"
-                      value={temuUsername}
-                      onChange={(e) => setTemuUsername(e.target.value)}
-                      required
-                    />
+                )}
 
-                    <Input
-                      label="Your Temu Account Email"
-                      type="email"
-                      placeholder="e.g. john@example.com"
-                      value={temuEmail}
-                      onChange={(e) => setTemuEmail(e.target.value)}
-                      required
-                    />
+                {successMsg && (
+                  <div className="p-3 bg-[#ECFDF5] border border-[#A7F3D0] rounded-lg text-xs text-[#059669] space-y-2">
+                    <p className="font-semibold">{successMsg}</p>
+                    {submittedLinks.length > 0 && (
+                      <div className="space-y-1.5 pt-2 border-t border-[#A7F3D0]">
+                        <span className="block text-[11px] font-bold text-[#047857]">
+                          Click each link below to accept the Temu invitation:
+                        </span>
+                        {submittedLinks.map((item, idx) => (
+                          <a
+                            key={item.taskId}
+                            href={item.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2 rounded bg-white border border-[#A7F3D0] text-[#111827] hover:border-[#F95700] text-xs font-semibold"
+                          >
+                            <span className="truncate">
+                              {idx + 1}. {item.title} ({formatNaira(BigInt(item.rewardKobo))})
+                            </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-[#F95700] shrink-0 ml-2" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
+                {submittedLinks.length === 0 && (
+                  !user ? (
+                    <div className="p-4 bg-[#F7F7F8] rounded-xl text-center space-y-3">
+                      <p className="text-xs text-[#6B7280]">
+                        Sign in to submit your Temu account info and receive your payout directly into your wallet!
+                      </p>
+                      <Button
+                        size="md"
+                        variant="primary"
+                        className="w-full text-xs font-bold"
+                        onClick={() =>
+                          signInWithGoogle(
+                            selectedTask ? `/tasks?taskId=${selectedTask.id}` : '/tasks'
+                          )
+                        }
+                      >
+                        Sign In with Google to Complete Task
+                      </Button>
+                    </div>
+                  ) : (
+                    <form id="task-submit-form" onSubmit={handleSubmitTask} className="space-y-3">
+                      <Input
+                        label="Your Temu Profile Name"
+                        placeholder="e.g. JohnD or TemuUser_82"
+                        value={temuUsername}
+                        onChange={(e) => setTemuUsername(e.target.value)}
+                        required
+                      />
+
+                      <Input
+                        label="Your Temu Account Email"
+                        type="email"
+                        placeholder="e.g. john@example.com"
+                        value={temuEmail}
+                        onChange={(e) => setTemuEmail(e.target.value)}
+                        required
+                      />
+                    </form>
+                  )
+                )}
+              </div>
+
+              {/* Sticky Footer */}
+              <div className="p-3 sm:p-3.5 border-t border-[#E5E7EB] bg-[#F7F7F8] flex items-center justify-end gap-2.5 shrink-0">
+                {submittedLinks.length === 0 ? (
+                  user && (
+                    <>
                       <Button
                         type="button"
                         variant="outline"
@@ -865,6 +881,7 @@ export default function AvailableTasksPage() {
                       </Button>
                       <Button
                         type="submit"
+                        form="task-submit-form"
                         variant="primary"
                         size="sm"
                         isLoading={isSubmitting}
@@ -876,17 +893,15 @@ export default function AvailableTasksPage() {
                             )})`
                           : 'Submit & Open Temu'}
                       </Button>
-                    </div>
-                  </form>
-                )
-              ) : (
-                <div className="flex justify-end pt-2">
+                    </>
+                  )
+                ) : (
                   <Button size="sm" variant="primary" onClick={handleCloseModal}>
                     Done
                   </Button>
-                </div>
-              )}
-            </Card>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -900,11 +915,11 @@ export default function AvailableTasksPage() {
 
         {/* Rejection Reason & Proof Modal */}
         {viewProofModal.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in">
-            <Card className="max-w-lg w-full p-6 space-y-4 shadow-2xl bg-white max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+              <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
                 <div>
-                  <h3 className="text-base font-bold text-[#111827]">Submission Rejected</h3>
+                  <h3 className="text-sm sm:text-base font-bold text-[#111827]">Submission Rejected</h3>
                   {viewProofModal.taskTitle && (
                     <p className="text-xs text-[#6B7280]">
                       Task: <strong>{viewProofModal.taskTitle}</strong>
@@ -914,14 +929,14 @@ export default function AvailableTasksPage() {
                 <button
                   type="button"
                   onClick={() => setViewProofModal({ isOpen: false, reason: '' })}
-                  className="text-[#9CA3AF] hover:text-[#111827] p-1"
+                  className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-3">
-                <div className="p-3.5 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#991B1B] space-y-1">
+              <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
+                <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#991B1B] space-y-1">
                   <span className="font-bold block">Owner&apos;s Stated Reason:</span>
                   <p className="leading-relaxed">{viewProofModal.reason}</p>
                 </div>
@@ -934,7 +949,7 @@ export default function AvailableTasksPage() {
                       <img
                         src={viewProofModal.proofUrl}
                         alt="Rejection Proof"
-                        className="w-full max-h-[400px] object-contain rounded-lg mx-auto"
+                        className="w-full max-h-[45vh] sm:max-h-[350px] object-contain rounded-lg mx-auto"
                       />
                     </div>
                     <div className="text-right">
@@ -953,11 +968,11 @@ export default function AvailableTasksPage() {
                 )}
 
                 <div className="p-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-[11px] text-[#92400E]">
-                  <strong>Nightly Admin Dispute Notice:</strong> All rejected submissions are automatically queued for nightly administrator review (11:00 PM Lagos). If the task owner improperly rejected a valid submission, our system will reverse the decline and credit your reward.
+                  <strong>Daily Admin Dispute Notice:</strong> All rejected submissions are automatically queued for morning administrator review (10:00 AM Lagos). If the task owner improperly rejected a valid submission, our system will reverse the decline and credit your reward.
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-[#E5E7EB]">
+              <div className="p-3 sm:p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] flex justify-end shrink-0">
                 <Button
                   size="sm"
                   variant="outline"
@@ -966,7 +981,7 @@ export default function AvailableTasksPage() {
                   Close
                 </Button>
               </div>
-            </Card>
+            </div>
           </div>
         )}
       </div>
