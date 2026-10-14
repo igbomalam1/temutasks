@@ -41,8 +41,6 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
-
   const protectedPrefixes = [
     '/dashboard',
     '/tasks',
@@ -54,42 +52,52 @@ export async function middleware(request: NextRequest) {
     '/notifications',
   ];
 
+  const pathname = request.nextUrl.pathname;
   const isProtectedRoute = protectedPrefixes.some(
-    (prefix) =>
-      request.nextUrl.pathname === prefix ||
-      request.nextUrl.pathname.startsWith(`${prefix}/`)
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
+  const isLoginRoute = pathname === '/login';
+  const isAdminRoute = pathname.startsWith('/admin');
 
-  if (isProtectedRoute && !user) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('next', request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+  // If public route (e.g. /, /rules, /privacy, /terms), bypass user network fetch for instant loading
+  if (!isProtectedRoute && !isLoginRoute && !isAdminRoute) {
+    return response;
   }
 
-  // Redirect logged-in user away from /login directly to /dashboard
-  if (request.nextUrl.pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
 
-  // Admin route check
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/login?next=/admin', request.url));
+    if (isProtectedRoute && !user) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(loginUrl);
     }
 
-    const { data: profile } = await supabase
-      .from('temutask_profiles')
-      .select('role, status')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile?.status === 'suspended') {
-      return NextResponse.redirect(new URL('/suspended', request.url));
-    }
-
-    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+    if (isLoginRoute && user) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
+
+    if (isAdminRoute) {
+      if (!user) {
+        return NextResponse.redirect(new URL('/login?next=/admin', request.url));
+      }
+
+      const { data: profile } = await supabase
+        .from('temutask_profiles')
+        .select('role, status')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile?.status === 'suspended') {
+        return NextResponse.redirect(new URL('/suspended', request.url));
+      }
+
+      if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
+  } catch (err) {
+    console.error('Middleware auth check error:', err);
   }
 
   return response;
