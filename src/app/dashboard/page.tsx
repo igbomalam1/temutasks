@@ -132,7 +132,7 @@ export default function DashboardPage() {
     typeof window !== 'undefined' && effectiveReferralCode
       ? `${window.location.origin}/?ref=${effectiveReferralCode}`
       : effectiveReferralCode
-      ? `https://temutasks.com/?ref=${effectiveReferralCode}`
+      ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/?ref=${effectiveReferralCode}`
       : '';
 
   const getInviteMessage = () =>
