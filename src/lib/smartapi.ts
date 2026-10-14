@@ -1,8 +1,8 @@
 export const NETWORK_PLAN_IDS: Record<string, number> = {
-  MTN: 1,
-  AIRTEL: 2,
-  GLO: 3,
-  '9MOBILE': 4,
+  MTN: 10,
+  AIRTEL: 11,
+  GLO: 12,
+  '9MOBILE': 1651,
 };
 
 export interface AirtimePurchaseParams {
@@ -22,7 +22,7 @@ export interface AirtimeResponse {
 
 export async function purchaseAirtime(params: AirtimePurchaseParams): Promise<AirtimeResponse> {
   const apiKey = process.env.SMARTAPI_API_KEY;
-  const pin = process.env.SMARTAPI_PIN || '1983';
+  const pin = process.env.SMARTAPI_PIN || '1234';
 
   if (!apiKey) {
     throw new Error('SMARTAPI_API_KEY is not configured');
