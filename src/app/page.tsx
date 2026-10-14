@@ -218,23 +218,23 @@ export default function LandingPage() {
         </div>
 
         {/* Pro Upsell Callout Banner */}
-        <div className="bg-gradient-to-r from-[#111827] to-[#1E293B] rounded-2xl p-6 sm:p-7 text-white shadow-md border border-[#334155] flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-[#E5E7EB] shadow-xs hover:border-[#F95700]/50 transition-all flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5 max-w-xl">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F95700]/20 border border-[#F95700]/40 text-[#F95700] text-[11px] font-bold uppercase tracking-wider">
-              <Sparkles className="w-3 h-3" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FFF5F0] border border-[#F95700]/30 text-[#F95700] text-[11px] font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
               Pro Earner Advantage
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-white">
+            <h3 className="text-lg sm:text-xl font-bold text-[#111827]">
               Want to submit many tasks on a single task?
             </h3>
-            <p className="text-xs sm:text-sm text-[#94A3B8] leading-relaxed">
-              Standard users can only submit once per task. Upgrade to <strong>TemuTasks Pro</strong> for just ₦200 to submit multiple times on the same task and earn for your total submissions!
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+              Standard users can only submit once per task. Upgrade to <strong className="text-[#111827]">TemuTasks Pro</strong> for just ₦200 to submit multiple times on the same task and earn for your total submissions!
             </p>
           </div>
 
           <div className="shrink-0 flex items-center">
             <Link href="/pro" className="w-full sm:w-auto">
-              <Button size="lg" variant="primary" className="w-full sm:w-auto text-sm font-bold shadow-md">
+              <Button size="lg" variant="primary" className="w-full sm:w-auto text-sm font-bold shadow-xs">
                 Upgrade to Pro (₦200) →
               </Button>
             </Link>
