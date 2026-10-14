@@ -28,6 +28,7 @@ import {
   Gift,
   X,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { createClient } from '@/lib/supabase/client';
 import {
   TransactionReceiptModal,
@@ -42,19 +43,28 @@ export default function DashboardPage() {
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
   const [selectedTx, setSelectedTx] = useState<TransactionReceiptData | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
-  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const dismissed = localStorage.getItem('temutask_welcome_dismissed');
-      if (dismissed === 'true') {
-        setShowWelcomeBanner(false);
+      if (dismissed !== 'true') {
+        setShowWelcomeModal(true);
+        setTimeout(() => {
+          try {
+            confetti({
+              particleCount: 70,
+              spread: 60,
+              origin: { y: 0.6 },
+            });
+          } catch {}
+        }, 400);
       }
     }
   }, []);
 
-  const dismissWelcomeBanner = () => {
-    setShowWelcomeBanner(false);
+  const dismissWelcomeModal = () => {
+    setShowWelcomeModal(false);
     if (typeof window !== 'undefined') {
       localStorage.setItem('temutask_welcome_dismissed', 'true');
     }
@@ -184,73 +194,6 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        {/* New User Welcome Banner */}
-        {showWelcomeBanner && (
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFF5F0] via-[#FFFBEB] to-[#FEF3C7] border-2 border-[#F95700]/30 p-5 sm:p-6 shadow-sm">
-            <button
-              onClick={dismissWelcomeBanner}
-              className="absolute top-3.5 right-3.5 p-1.5 rounded-full text-[#6B7280] hover:text-[#111827] hover:bg-black/5 transition-colors"
-              title="Dismiss banner"
-              aria-label="Dismiss banner"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 pr-6 sm:pr-8">
-              <div className="space-y-2 max-w-2xl">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#F95700] text-white text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-xs">
-                    <Gift className="w-3.5 h-3.5" />
-                    ₦25 Welcome Bonus
-                  </span>
-                  <span className="text-xs text-[#10B981] font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Active in your wallet balance
-                  </span>
-                </div>
-
-                <h2 className="text-lg sm:text-xl font-extrabold text-[#111827] leading-snug">
-                  Welcome to TemuTasks! Earn cash doing simple tasks or promote your links.
-                </h2>
-
-                <p className="text-xs sm:text-sm text-[#4B5563] leading-relaxed">
-                  You received <strong>₦25 instant welcome bonus</strong> on registration. You can earn an extra <strong>₦25 instant bonus</strong> for every friend you refer once they complete their first task, plus <strong>continuous lifetime commissions</strong> on every task they ever complete!
-                </p>
-              </div>
-
-              {/* Referral Actions Inside Banner */}
-              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={shareReferral}
-                  className="bg-[#F95700] hover:bg-[#E04E00] text-white font-bold shadow-xs flex items-center justify-center gap-1.5"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  Share &amp; Earn ₦25 per Friend
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={copyReferralLink}
-                  className="bg-white hover:bg-[#F9FAFB] text-[#111827] border-[#E5E7EB] font-semibold text-xs flex items-center justify-center gap-1.5"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-[#10B981]" />
-                      Copied Invite Link!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
-                      Copy Referral Invite
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Primary Wallet Hero Card */}
         <Card className="bg-gradient-to-br from-[#111827] to-[#1F2937] text-white border-none shadow-md p-6 sm:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -495,6 +438,121 @@ export default function DashboardPage() {
           onClose={() => setIsReceiptOpen(false)}
           tx={selectedTx}
         />
+
+        {/* Welcome Bonus Celebration Popup Modal */}
+        {showWelcomeModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in"
+            onClick={dismissWelcomeModal}
+          >
+            <div
+              className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl relative border border-[#E5E7EB] animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={dismissWelcomeModal}
+                className="absolute top-4 right-4 p-1.5 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
+                title="Close"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Header / Celebration Icon */}
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#FFF5F0] to-[#FFE8DC] border border-[#F95700]/30 flex items-center justify-center text-[#F95700] shadow-sm">
+                  <Gift className="w-7 h-7" />
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF5F0] border border-[#F95700]/30 text-[#F95700] text-xs font-extrabold uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  ₦25 Welcome Bonus
+                </div>
+
+                <h2 className="text-xl sm:text-2xl font-black text-[#111827] tracking-tight">
+                  Welcome to TemuTasks!
+                </h2>
+
+                <p className="text-xs sm:text-sm text-[#4B5563] leading-relaxed">
+                  You received <strong>₦25 instant welcome bonus</strong> on registration. It is active in your available wallet balance right now!
+                </p>
+              </div>
+
+              {/* Platform Feature Summary */}
+              <div className="p-3.5 rounded-xl bg-[#F7F7F8] border border-[#E5E7EB] text-xs text-[#4B5563] space-y-1.5">
+                <div className="flex items-center gap-2 font-bold text-[#111827]">
+                  <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />
+                  <span>Earn cash doing tasks or promote your links</span>
+                </div>
+                <p className="text-[11px] text-[#6B7280] leading-relaxed pl-6">
+                  Complete quick invitation tasks to earn real cash, or create tasks to reach thousands of Nigerians. Cash out straight to OPay/PalmPay or buy cheap airtime!
+                </p>
+              </div>
+
+              {/* Referral Earning Booster Box */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-[#FFF5F0] to-[#FFFBEB] border border-[#F95700]/25 space-y-3">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#F95700] flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5" />
+                    Refer &amp; Earn Additional ₦25 Cash
+                  </span>
+                  <p className="text-xs text-[#4B5563] leading-relaxed">
+                    Earn an extra <strong>₦25 instant bonus</strong> when your friend completes their first task, plus <strong>continuous lifetime commissions</strong> on every task they ever complete!
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div
+                    onClick={copyReferralLink}
+                    title="Click to copy invite message"
+                    className="flex-1 bg-white px-3 py-2 rounded-lg border border-[#E5E7EB] text-[11px] font-mono text-[#111827] truncate cursor-pointer hover:border-[#F95700] select-all"
+                  >
+                    {referralUrl || 'Generating referral link...'}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={copied ? 'primary' : 'outline'}
+                    onClick={copyReferralLink}
+                    className="shrink-0 text-xs"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-white mr-1" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-1" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={shareReferral}
+                  className="w-full text-xs font-bold bg-[#F95700] hover:bg-[#E04E00] text-white flex items-center justify-center gap-1.5 shadow-xs"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share Referral Link on WhatsApp
+                </Button>
+              </div>
+
+              {/* Primary Dismiss Button */}
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={dismissWelcomeModal}
+                className="w-full font-bold text-sm bg-[#111827] hover:bg-[#1F2937] text-white shadow-md"
+              >
+                Start Earning Now →
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );
