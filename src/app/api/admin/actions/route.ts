@@ -322,13 +322,14 @@ export async function POST(request: Request) {
         const payoutHtml = renderEmailTemplate({
           title: 'Your Cash Out Has Been Paid! 💸',
           contentHtml: `<p>Hello ${wth.temutask_profiles?.full_name || 'User'},</p>
-          <p>Your withdrawal request has been successfully processed and paid out:</p>
-          <p><strong>Amount:</strong> ₦${amtNaira}.00<br>
+          <p>Your withdrawal request has been successfully processed and disbursed:</p>
+          <p><strong>Net Amount Paid:</strong> <span style="font-size: 16px; color: #10B981; font-weight: bold;">₦${amtNaira}.00</span><br>
+          <strong>Platform Transfer Fee:</strong> ₦50.00<br>
           <strong>Destination:</strong> ${wth.payment_destination?.toUpperCase()}<br>
           <strong>Account Number:</strong> ${wth.account_number}<br>
           <strong>Account Name:</strong> ${wth.account_name}<br>
           <strong>Reference:</strong> ${wth.reference}</p>
-          <p>The funds should reflect in your account shortly.</p>`,
+          <p>The funds should reflect in your bank/wallet account shortly.</p>`,
           ctaText: 'View Wallet',
           ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
         });

@@ -887,14 +887,15 @@ export default function AdminDashboardPage() {
                         <th className="p-3">Destination</th>
                         <th className="p-3">Account Number</th>
                         <th className="p-3">Account Name</th>
-                        <th className="p-3">Amount</th>
+                        <th className="p-3">Net to Pay</th>
                         <th className="p-3">Status</th>
                         <th className="p-3 text-right rounded-r-md">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E5E7EB]">
                       {filteredItems.map((wth) => {
-                        const amtKobo = BigInt(wth.amount_kobo || 0);
+                        const netKobo = BigInt(wth.amount_kobo || 0);
+                        const grossKobo = BigInt(wth.total_debit_kobo || wth.amount_kobo || 0);
                         return (
                           <tr key={wth.id} className="hover:bg-[#F9FAFB]">
                             <td className="p-3 font-semibold text-[#111827]">
@@ -908,7 +909,14 @@ export default function AdminDashboardPage() {
                             </td>
                             <td className="p-3 font-mono font-bold">{wth.account_number}</td>
                             <td className="p-3">{wth.account_name}</td>
-                            <td className="p-3 font-bold text-[#111827]">{formatNaira(amtKobo)}</td>
+                            <td className="p-3">
+                              <span className="font-extrabold text-[#10B981] text-sm block">
+                                {formatNaira(netKobo)}
+                              </span>
+                              <span className="text-[10px] text-[#6B7280] font-normal block">
+                                Gross: {formatNaira(grossKobo)} (Fee: ₦50)
+                              </span>
+                            </td>
                             <td className="p-3">
                               <Badge variant={wth.status === 'paid' ? 'success' : 'warning'}>
                                 {wth.status?.toUpperCase() || 'PENDING'}

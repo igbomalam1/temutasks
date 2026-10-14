@@ -19,14 +19,39 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  Receipt,
 } from 'lucide-react';
+import {
+  TransactionReceiptModal,
+  TransactionReceiptData,
+} from '@/components/wallet/TransactionReceiptModal';
 
 export default function WalletPage() {
   const { user, wallet, profile } = useAuth();
   const [ledger, setLedger] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTx, setSelectedTx] = useState<TransactionReceiptData | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const supabase = createClient();
+
+  const openReceiptForTx = (tx: any) => {
+    setSelectedTx({
+      id: tx.id,
+      reference: tx.reference,
+      description: tx.description,
+      transactionType: tx.transaction_type,
+      direction: tx.direction,
+      amountKobo: tx.amount_kobo,
+      date: new Date(tx.created_at).toLocaleString('en-NG', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+      balanceAfterKobo: tx.balance_after_kobo,
+      status: 'Completed',
+    });
+    setIsReceiptOpen(true);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -111,8 +136,13 @@ export default function WalletPage() {
 
         {/* Ledger Transactions Table */}
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-[#111827]">Financial Audit Ledger</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
+            <div>
+              <h2 className="text-base font-bold text-[#111827]">Financial Audit Ledger</h2>
+              <p className="text-xs text-[#6B7280]">
+                Click any transaction row to view, download, or share its official receipt.
+              </p>
+            </div>
             <span className="text-xs text-[#9CA3AF]">Showing last 50 transactions</span>
           </div>
 
@@ -131,12 +161,17 @@ export default function WalletPage() {
                     <th className="p-3">Description</th>
                     <th className="p-3">Type</th>
                     <th className="p-3">Reference</th>
-                    <th className="p-3 text-right rounded-r-md">Amount</th>
+                    <th className="p-3 text-right">Amount</th>
+                    <th className="p-3 text-center rounded-r-md">Receipt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB]">
                   {ledger.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-[#F9FAFB]">
+                    <tr
+                      key={tx.id}
+                      onClick={() => openReceiptForTx(tx)}
+                      className="hover:bg-[#FFF5F0]/60 active:bg-[#FFEAE0] cursor-pointer transition-colors group"
+                    >
                       <td className="p-3 text-[#6B7280] whitespace-nowrap">
                         {new Date(tx.created_at).toLocaleString('en-NG', {
                           day: 'numeric',
@@ -145,7 +180,9 @@ export default function WalletPage() {
                           minute: '2-digit',
                         })}
                       </td>
-                      <td className="p-3 font-semibold text-[#111827]">{tx.description}</td>
+                      <td className="p-3 font-semibold text-[#111827] group-hover:text-[#F95700] transition-colors">
+                        {tx.description}
+                      </td>
                       <td className="p-3">
                         <Badge variant={tx.direction === 'credit' ? 'success' : 'secondary'}>
                           {tx.transaction_type.replace('_', ' ')}
@@ -160,6 +197,12 @@ export default function WalletPage() {
                         {tx.direction === 'credit' ? '+' : '-'}
                         {formatNaira(BigInt(tx.amount_kobo))}
                       </td>
+                      <td className="p-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold text-[#F95700] bg-white border border-[#FDBA74] shadow-2xs group-hover:bg-[#F95700] group-hover:text-white transition-all">
+                          <Receipt className="w-3 h-3" />
+                          Receipt
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -167,6 +210,13 @@ export default function WalletPage() {
             </div>
           )}
         </Card>
+
+        {/* Digital Receipt Modal */}
+        <TransactionReceiptModal
+          isOpen={isReceiptOpen}
+          onClose={() => setIsReceiptOpen(false)}
+          tx={selectedTx}
+        />
       </div>
     </AppShell>
   );

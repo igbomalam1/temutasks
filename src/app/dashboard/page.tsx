@@ -24,8 +24,13 @@ import {
   Share2,
   ChevronRight,
   TrendingUp,
+  Receipt,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import {
+  TransactionReceiptModal,
+  TransactionReceiptData,
+} from '@/components/wallet/TransactionReceiptModal';
 
 export default function DashboardPage() {
   const { user, profile, wallet } = useAuth();
@@ -33,8 +38,28 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [activeTasksCount, setActiveTasksCount] = useState(0);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const [selectedTx, setSelectedTx] = useState<TransactionReceiptData | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const supabase = createClient();
+
+  const openReceiptForTx = (tx: any) => {
+    setSelectedTx({
+      id: tx.id,
+      reference: tx.reference,
+      description: tx.description,
+      transactionType: tx.transaction_type,
+      direction: tx.direction,
+      amountKobo: tx.amount_kobo,
+      date: new Date(tx.created_at).toLocaleString('en-NG', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+      balanceAfterKobo: tx.balance_after_kobo,
+      status: 'Completed',
+    });
+    setIsReceiptOpen(true);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -338,21 +363,35 @@ export default function DashboardPage() {
           ) : (
             <div className="divide-y divide-[#E5E7EB]">
               {recentTransactions.map((tx) => (
-                <div key={tx.id} className="py-3 flex items-center justify-between">
+                <div
+                  key={tx.id}
+                  onClick={() => openReceiptForTx(tx)}
+                  role="button"
+                  tabIndex={0}
+                  className="py-3 px-2.5 -mx-2.5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-[#FFF5F0]/60 active:bg-[#FFEAE0] transition-colors group"
+                >
                   <div className="space-y-0.5">
-                    <div className="text-sm font-semibold text-[#111827]">{tx.description}</div>
-                    <div className="text-xs text-[#9CA3AF]">
-                      {new Date(tx.created_at).toLocaleDateString('en-NG', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}{' '}
-                      • Ref: {tx.reference}
+                    <div className="text-sm font-semibold text-[#111827] group-hover:text-[#F95700] transition-colors flex items-center gap-1.5">
+                      <span>{tx.description}</span>
+                    </div>
+                    <div className="text-xs text-[#9CA3AF] flex items-center gap-1.5 flex-wrap">
+                      <span>
+                        {new Date(tx.created_at).toLocaleDateString('en-NG', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                      <span>•</span>
+                      <span className="font-mono text-[11px]">Ref: {tx.reference}</span>
+                      <span className="text-[10px] font-semibold text-[#F95700] bg-[#FFF5F0] border border-[#FDBA74]/50 px-1.5 py-0.2 rounded inline-flex items-center gap-0.5 opacity-90 group-hover:opacity-100">
+                        <Receipt className="w-2.5 h-2.5" /> View Receipt
+                      </span>
                     </div>
                   </div>
                   <div
-                    className={`text-sm font-bold ${
+                    className={`text-sm font-bold shrink-0 ml-3 ${
                       tx.direction === 'credit' ? 'text-[#10B981]' : 'text-[#EF4444]'
                     }`}
                   >
@@ -364,6 +403,13 @@ export default function DashboardPage() {
             </div>
           )}
         </Card>
+
+        {/* Digital Receipt Modal */}
+        <TransactionReceiptModal
+          isOpen={isReceiptOpen}
+          onClose={() => setIsReceiptOpen(false)}
+          tx={selectedTx}
+        />
       </div>
     </AppShell>
   );

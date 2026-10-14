@@ -11,6 +11,10 @@ import { formatNaira, formatNairaPlain } from '@/lib/utils';
 import Link from 'next/link';
 import { ArrowUpRight, ArrowLeft, CheckCircle2, AlertCircle, Building2 } from 'lucide-react';
 import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
+import {
+  TransactionReceiptModal,
+  TransactionReceiptData,
+} from '@/components/wallet/TransactionReceiptModal';
 
 export default function CashOutPage() {
   const { user, wallet, refreshProfile, signInWithGoogle } = useAuth();
@@ -22,6 +26,13 @@ export default function CashOutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Receipt preview state
+  const [receiptData, setReceiptData] = useState<TransactionReceiptData | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+
+  const WITHDRAWAL_FEE = 50;
+  const netPayout = Math.max(0, (amount || 0) - WITHDRAWAL_FEE);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -106,17 +117,34 @@ export default function CashOutPage() {
           title: 'Withdrawal Failed',
           message: errorText,
         });
-      } else {
-        const successText = `Withdrawal request submitted! ₦${amount} has been reserved from your wallet and placed into the admin queue. Ref: ${data.reference}`;
+        const successText = `Withdrawal request submitted! ₦${amount} debited from wallet (Net payout: ₦${netPayout} after ₦${WITHDRAWAL_FEE} transfer fee). Ref: ${data.reference}`;
         setSuccessMsg(successText);
+
+        const createdReceipt: TransactionReceiptData = {
+          reference: data.reference,
+          description: `Cash out to ${destination.toUpperCase()} (${accountNumber.trim()}) [Gross: ₦${amount.toLocaleString()} - ₦${WITHDRAWAL_FEE} fee = Net payout: ₦${netPayout.toLocaleString()}]`,
+          transactionType: 'withdrawal_reserve',
+          direction: 'debit',
+          amountKobo: BigInt(amount || 0) * BigInt(100),
+          date: new Date().toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }),
+          status: 'Processing Payout',
+          metadata: {
+            destination: destination.toUpperCase(),
+            accountNumber: accountNumber.trim(),
+            accountName: accountName.trim(),
+            grossAmount: (amount || 0).toLocaleString(),
+            fee: WITHDRAWAL_FEE,
+            netPayout: netPayout.toLocaleString(),
+          },
+        };
+        setReceiptData(createdReceipt);
+
         setModalState({
           isOpen: true,
           type: 'success',
           title: 'Withdrawal Submitted! 💸',
-          message: `Your withdrawal of ₦${amount} to ${accountName} (${destination.toUpperCase()} - ${accountNumber}) is placed in queue. Ref: ${data.reference}`,
+          message: `Your cash out of ₦${amount} to ${accountName} (${destination.toUpperCase()} - ${accountNumber}) is submitted. Net payout of ₦${netPayout} will be credited to your account after ₦${WITHDRAWAL_FEE} processing fee. Ref: ${data.reference}`,
         });
-        setAccountNumber('');
-        setAccountName('');
         await refreshProfile();
       }
     } catch (err: any) {
@@ -220,13 +248,29 @@ export default function CashOutPage() {
               required
             />
 
+            {/* Transparent Fee Breakdown */}
+            <div className="p-3.5 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] text-xs space-y-2">
+              <div className="flex justify-between text-[#6B7280]">
+                <span>Withdrawal Amount:</span>
+                <span className="font-semibold text-[#111827]">₦{(amount || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[#6B7280]">
+                <span>Processing & Transfer Fee:</span>
+                <span className="font-semibold text-[#EF4444]">- ₦{WITHDRAWAL_FEE}</span>
+              </div>
+              <div className="border-t border-[#E5E7EB] pt-2 flex justify-between font-bold text-sm text-[#111827]">
+                <span>Net Amount You Will Receive:</span>
+                <span className="text-[#10B981]">₦{netPayout.toLocaleString()}</span>
+              </div>
+            </div>
+
             <Button
               type="submit"
               size="lg"
               variant="primary"
               className="w-full text-base mt-2"
               isLoading={isLoading}
-              disabled={requestedKobo > balance || amount < 1000}
+              disabled={requestedKobo > balance || (amount || 0) < 1000}
             >
               Request Cash Out of {formatNairaPlain(amount)}
             </Button>
@@ -239,15 +283,35 @@ export default function CashOutPage() {
           type={modalState.type}
           title={modalState.title}
           message={modalState.message}
-          actionText={modalState.type === 'success' ? 'Back to Wallet' : 'Close'}
+          actionText={modalState.type === 'success' ? 'Download Receipt' : 'Close'}
           onAction={() => {
             if (modalState.type === 'success') {
-              window.location.href = '/wallet';
+              setModalState((prev) => ({ ...prev, isOpen: false }));
+              setIsReceiptOpen(true);
             } else {
               setModalState((prev) => ({ ...prev, isOpen: false }));
             }
           }}
+          secondaryText={modalState.type === 'success' ? 'Back to Wallet' : undefined}
+          onSecondary={
+            modalState.type === 'success'
+              ? () => {
+                  window.location.href = '/wallet';
+                }
+              : undefined
+          }
           onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        />
+
+        {/* Digital Receipt Modal */}
+        <TransactionReceiptModal
+          isOpen={isReceiptOpen}
+          onClose={() => {
+            setIsReceiptOpen(false);
+            setAccountNumber('');
+            setAccountName('');
+          }}
+          tx={receiptData}
         />
       </div>
     </AppShell>

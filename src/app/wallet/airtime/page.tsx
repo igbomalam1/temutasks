@@ -11,6 +11,10 @@ import { formatNaira, formatNairaPlain } from '@/lib/utils';
 import Link from 'next/link';
 import { Smartphone, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
+import {
+  TransactionReceiptModal,
+  TransactionReceiptData,
+} from '@/components/wallet/TransactionReceiptModal';
 
 export default function AirtimePage() {
   const { user, wallet, refreshProfile, signInWithGoogle } = useAuth();
@@ -21,6 +25,10 @@ export default function AirtimePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Receipt Preview state
+  const [receiptData, setReceiptData] = useState<TransactionReceiptData | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -121,13 +129,24 @@ export default function AirtimePage() {
       } else {
         const successText = `Success! ₦${amount} ${network} airtime recharge has been sent to ${phone}. Ref: ${data.reference}`;
         setSuccessMsg(successText);
+
+        const createdReceipt: TransactionReceiptData = {
+          reference: data.reference,
+          description: `${network} airtime recharge to ${phone.trim()} (₦${amount} + ₦${PLATFORM_FEE} platform fee = ₦${totalChargeNaira})`,
+          transactionType: 'airtime_recharge',
+          direction: 'debit',
+          amountKobo: BigInt(totalChargeNaira) * BigInt(100),
+          date: new Date().toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }),
+          status: 'Completed',
+        };
+        setReceiptData(createdReceipt);
+
         setModalState({
           isOpen: true,
           type: 'success',
           title: 'Airtime Recharged Successfully! 📱',
           message: `₦${amount} ${network} airtime has been delivered to ${phone}. Total charged: ₦${totalChargeNaira} (including ₦${PLATFORM_FEE} platform fee). Ref: ${data.reference}`,
         });
-        setPhone('');
         await refreshProfile();
       }
     } catch (err: any) {
@@ -302,10 +321,11 @@ export default function AirtimePage() {
           type={modalState.type}
           title={modalState.title}
           message={modalState.message}
-          actionText={modalState.type === 'success' ? 'Back to Wallet' : 'Close'}
+          actionText={modalState.type === 'success' ? 'Download Receipt' : 'Close'}
           onAction={() => {
             if (modalState.type === 'success') {
-              window.location.href = '/wallet';
+              setModalState((prev) => ({ ...prev, isOpen: false }));
+              setIsReceiptOpen(true);
             } else {
               setModalState((prev) => ({ ...prev, isOpen: false }));
             }
@@ -313,10 +333,27 @@ export default function AirtimePage() {
           secondaryText={modalState.type === 'success' ? 'Recharge Another' : undefined}
           onSecondary={
             modalState.type === 'success'
-              ? () => setModalState((prev) => ({ ...prev, isOpen: false }))
+              ? () => {
+                  setModalState((prev) => ({ ...prev, isOpen: false }));
+                  setPhone('');
+                }
               : undefined
           }
           onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        />
+
+        {/* Beautiful Digital Receipt Modal */}
+        <TransactionReceiptModal
+          isOpen={isReceiptOpen}
+          onClose={() => {
+            setIsReceiptOpen(false);
+            setPhone('');
+          }}
+          tx={receiptData}
+          onRechargeAnother={() => {
+            setIsReceiptOpen(false);
+            setPhone('');
+          }}
         />
       </div>
     </AppShell>
