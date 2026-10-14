@@ -222,7 +222,16 @@ export function AppShell({ children }: AppShellProps) {
               <Menu className="w-5 h-5" />
             </button>
             <div className="lg:hidden">
-              <Logo size="sm" />
+              {user ? (
+                <div className="flex flex-col justify-center leading-tight">
+                  <span className="text-[10px] font-medium text-[#6B7280]">Welcome back,</span>
+                  <span className="text-xs sm:text-sm font-bold text-[#111827] truncate max-w-[150px] sm:max-w-[220px]">
+                    {profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Member'} 👋
+                  </span>
+                </div>
+              ) : (
+                <Logo size="sm" />
+              )}
             </div>
             <span className="hidden lg:inline-block text-sm font-bold text-[#111827] capitalize">
               {pathname === '/dashboard'

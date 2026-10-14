@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   PlusCircle,
   CheckCircle2,
+  ListTodo,
   Clock,
   Sparkles,
   Users,
@@ -138,38 +139,6 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        {/* Welcome & Tier Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-xs">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#111827]">
-                Welcome back, {profile?.full_name?.split(' ')[0] || 'Member'}! 👋
-              </h1>
-              {profile?.tier === 'pro' ? (
-                <Badge variant="premium">PRO</Badge>
-              ) : (
-                <Badge variant="secondary">Basic</Badge>
-              )}
-            </div>
-            <p className="text-xs sm:text-sm text-[#6B7280] mt-1">
-              Your Temu invitation & reward fintech dashboard
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <Link href="/tasks/create">
-              <Button size="sm" variant="primary" leftIcon={<PlusCircle className="w-4 h-4" />}>
-                Create Task
-              </Button>
-            </Link>
-            <Link href="/tasks">
-              <Button size="sm" variant="outline">
-                Earn Rewards
-              </Button>
-            </Link>
-          </div>
-        </div>
-
         {/* Primary Wallet Hero Card */}
         <Card className="bg-gradient-to-br from-[#111827] to-[#1F2937] text-white border-none shadow-md p-6 sm:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -217,57 +186,82 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card padding="sm" className="space-y-1">
-            <span className="text-xs text-[#6B7280]">Active Tasks</span>
-            <div className="text-xl font-bold text-[#111827]">{activeTasksCount}</div>
-            <Link
-              href="/my-tasks"
-              className="text-[11px] font-semibold text-[#F95700] inline-flex items-center gap-0.5"
-            >
-              View My Tasks <ChevronRight className="w-3 h-3" />
-            </Link>
-          </Card>
-
-          <Card padding="sm" className="space-y-1">
-            <span className="text-xs text-[#6B7280]">Pending Reviews</span>
-            <div className="text-xl font-bold text-[#111827]">{pendingReviewsCount}</div>
-            <Link
-              href="/my-tasks"
-              className="text-[11px] font-semibold text-[#F95700] inline-flex items-center gap-0.5"
-            >
-              Review Submissions <ChevronRight className="w-3 h-3" />
-            </Link>
-          </Card>
-
-          <Card padding="sm" className="space-y-1">
-            <span className="text-xs text-[#6B7280]">Referral Earnings</span>
-            <div className="text-xl font-bold text-[#10B981]">{formatNaira(refEarned)}</div>
-            <Link
-              href="/referrals"
-              className="text-[11px] font-semibold text-[#F95700] inline-flex items-center gap-0.5"
-            >
-              Referral Ledger <ChevronRight className="w-3 h-3" />
-            </Link>
-          </Card>
-
-          <Card padding="sm" className="space-y-1">
-            <span className="text-xs text-[#6B7280]">Account Tier</span>
-            <div className="text-xl font-bold text-[#111827] capitalize">
-              {profile?.tier || 'Basic'}
+        {/* Quick Action Navigation Buttons (Footer Bar Style: Button Icon + Button Name) */}
+        <div className="grid grid-cols-5 gap-2 sm:gap-3">
+          {/* Create Tasks */}
+          <Link
+            href="/tasks/create"
+            className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#FFF5F0] group-hover:bg-[#F95700] text-[#F95700] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
+              <PlusCircle className="w-5 h-5" />
             </div>
-            {profile?.tier === 'pro' ? (
-              <span className="text-[11px] text-[#10B981] font-semibold">Active Alerts</span>
-            ) : (
-              <Link
-                href="/pro"
-                className="text-[11px] font-semibold text-[#F95700] inline-flex items-center gap-0.5"
-              >
-                Upgrade (₦200) <ChevronRight className="w-3 h-3" />
-              </Link>
+            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+              Create Tasks
+            </span>
+          </Link>
+
+          {/* Earn Rewards */}
+          <Link
+            href="/tasks"
+            className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] group-hover:bg-[#0090FE] text-[#0090FE] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+              Earn Rewards
+            </span>
+          </Link>
+
+          {/* Tasks (active tasks) */}
+          <Link
+            href="/my-tasks"
+            className="relative flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+          >
+            {activeTasksCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 sm:right-3 px-1.5 py-0.2 text-[9px] font-extrabold bg-[#F95700] text-white rounded-full min-w-[16px] text-center shadow-xs">
+                {activeTasksCount}
+              </span>
             )}
-          </Card>
+            <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] group-hover:bg-[#10B981] text-[#10B981] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
+              <ListTodo className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+              Tasks
+            </span>
+          </Link>
+
+          {/* Review (pending reviews) */}
+          <Link
+            href="/my-tasks"
+            className="relative flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+          >
+            {pendingReviewsCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 sm:right-3 px-1.5 py-0.2 text-[9px] font-extrabold bg-[#F59E0B] text-white rounded-full min-w-[16px] text-center shadow-xs">
+                {pendingReviewsCount}
+              </span>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#FFFBEB] group-hover:bg-[#F59E0B] text-[#F59E0B] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
+              <Clock className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+              Review
+            </span>
+          </Link>
+
+          {/* Referrals */}
+          <Link
+            href="/referrals"
+            className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#F5F3FF] group-hover:bg-[#8B5CF6] text-[#8B5CF6] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
+              <Users className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+              Referrals
+            </span>
+          </Link>
         </div>
 
         {/* Permanent Referral Link Card */}
