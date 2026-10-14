@@ -60,39 +60,68 @@ export async function GET(request: Request) {
   const payload = order.related_payload;
 
   if (order.order_type === 'task_creation') {
-    // Publish the task
-    const { data: createdTask, error: taskCreateError } = await supabase
-      .from('temutask_tasks')
-      .insert({
-        user_id: order.user_id,
-        task_type: payload.taskType,
-        title: payload.title,
-        invitation_link: payload.invitationLink,
-        quantity_requested: payload.quantity,
-        quantity_approved: 0,
-        reward_per_participant_kobo: payload.rewardPerPartKobo,
-        commission_per_referrer_kobo: payload.commPerRefKobo,
-        base_cost_kobo: payload.baseCostKobo,
-        platform_fee_kobo: payload.platformFeeKobo,
-        premium_fee_kobo: payload.premiumFeeKobo,
-        total_cost_kobo: payload.totalCostKobo,
-        is_premium: payload.isPremium,
-        status: 'active', // Published
-        payment_reference: reference,
-      })
-      .select()
-      .single();
+    // Publish task(s) - supports both single and combined tasks
+    const isCombined = payload.isCombined && Array.isArray(payload.tasks);
+    const instructions = payload.instructions || '';
+    const tasksToInsert = isCombined
+      ? payload.tasks
+      : [
+          {
+            taskType: payload.taskType,
+            title: payload.title,
+            invitationLink: payload.invitationLink,
+            quantity: payload.quantity,
+            rewardPerPartKobo: payload.rewardPerPartKobo,
+            commPerRefKobo: payload.commPerRefKobo,
+            baseCostKobo: payload.baseCostKobo,
+          },
+        ];
 
-    if (taskCreateError) {
-      console.error('Error publishing task after payment:', taskCreateError);
-      return NextResponse.redirect(`${appUrl}/dashboard?error=Payment+received+but+task+activation+requires+review`);
+    const createdTasks: any[] = [];
+    for (const t of tasksToInsert) {
+      const fullTitle = `${t.title}|||${instructions}`;
+      const { data: createdTask, error: taskCreateError } = await supabase
+        .from('temutask_tasks')
+        .insert({
+          user_id: order.user_id,
+          task_type: t.taskType,
+          title: fullTitle,
+          invitation_link: t.invitationLink,
+          quantity_requested: t.quantity,
+          quantity_approved: 0,
+          reward_per_participant_kobo: t.rewardPerPartKobo,
+          commission_per_referrer_kobo: t.commPerRefKobo,
+          base_cost_kobo: t.baseCostKobo,
+          platform_fee_kobo: payload.platformFeeKobo,
+          premium_fee_kobo: payload.premiumFeeKobo,
+          total_cost_kobo: payload.totalCostKobo,
+          is_premium: !!payload.isPremium,
+          status: 'active', // Published
+          payment_reference: reference,
+        })
+        .select()
+        .single();
+
+      if (taskCreateError) {
+        console.error('Error publishing task after payment:', taskCreateError);
+      } else if (createdTask) {
+        createdTasks.push(createdTask);
+      }
+    }
+
+    if (createdTasks.length === 0) {
+      return NextResponse.redirect(
+        `${appUrl}/dashboard?error=Payment+received+but+task+activation+failed`
+      );
     }
 
     // In-app notification to task creator
     await supabase.from('temutask_notifications').insert({
       user_id: order.user_id,
-      title: 'Task Successfully Published! 🚀',
-      message: `Your task "${payload.title}" is now live in the marketplace. Participants can now complete it.`,
+      title: 'Task(s) Successfully Published! 🚀',
+      message: `Your ${
+        isCombined ? '2 combined tasks have' : 'task has'
+      } been published live to the marketplace.`,
       type: 'task_published',
       link: '/my-tasks',
     });
@@ -101,11 +130,11 @@ export async function GET(request: Request) {
     const userEmail = order.temutask_profiles?.email;
     if (userEmail) {
       const emailHtml = renderEmailTemplate({
-        title: 'Task Published Successfully! 🎉',
-        contentHtml: `<p>Your payment has been confirmed and your Temu invitation task is now live:</p>
-        <p><strong>Task:</strong> ${payload.title}<br>
-        <strong>Slots:</strong> ${payload.quantity} participants<br>
-        <strong>Type:</strong> ${payload.taskType === 'new_user' ? 'New Temu User' : 'Existing Temu User'}<br>
+        title: 'Task(s) Published Successfully! 🎉',
+        contentHtml: `<p>Your payment has been confirmed and your Temu invitation ${
+          isCombined ? 'tasks are' : 'task is'
+        } now live:</p>
+        <p><strong>Tasks Published:</strong> ${createdTasks.length}<br>
         <strong>Reference:</strong> ${reference}</p>
         <p>You can track submissions and approve participants from your task dashboard.</p>`,
         ctaText: 'View My Tasks',
@@ -114,16 +143,18 @@ export async function GET(request: Request) {
 
       sendEmail({
         to: userEmail,
-        subject: `[TemuTasks] Task Published: "${payload.title}"`,
+        subject: `[TemuTasks] ${isCombined ? 'Combined Tasks' : 'Task'} Published Live!`,
         html: emailHtml,
         eventType: 'task_published',
       }).catch((e) => console.error('Sendbyte email error:', e));
     }
 
     // Pro Member Task Alert: Send email alert to active opted-in Pro users
-    notifyProMembersAboutNewTask(createdTask, appUrl).catch((e) =>
-      console.error('Error alerting Pro members:', e)
-    );
+    for (const ct of createdTasks) {
+      notifyProMembersAboutNewTask(ct, appUrl).catch((e) =>
+        console.error('Error alerting Pro members:', e)
+      );
+    }
 
     return NextResponse.redirect(`${appUrl}/my-tasks?msg=Task+published+successfully`);
   } else if (order.order_type === 'pro_membership') {

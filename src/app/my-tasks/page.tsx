@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { formatNaira } from '@/lib/utils';
+import { formatNaira, parseTaskTitleAndInstructions } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import {
@@ -311,7 +311,9 @@ export default function MyTasksPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-base font-bold text-[#111827]">{task.title}</h3>
+                        <h3 className="text-base font-bold text-[#111827]">
+                          {parseTaskTitleAndInstructions(task.title).title}
+                        </h3>
                         <Badge variant={task.status === 'active' ? 'success' : 'secondary'}>
                           {task.status.toUpperCase()}
                         </Badge>

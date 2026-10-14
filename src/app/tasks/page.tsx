@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { formatNaira } from '@/lib/utils';
+import { formatNaira, parseTaskTitleAndInstructions } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import {
@@ -343,10 +343,10 @@ export default function AvailableTasksPage() {
                   )}
                 </div>
                 <h2 className="text-xl font-extrabold text-[#111827]">
-                  {featuredSharedTask.title}
+                  {parseTaskTitleAndInstructions(featuredSharedTask.title).title}
                 </h2>
                 <p className="text-xs text-[#6B7280]">
-                  You were invited to complete this task. Enter your Temu account info and accept the invitation to earn cash rewards directly to your wallet!
+                  {parseTaskTitleAndInstructions(featuredSharedTask.title).instructions}
                 </p>
               </div>
 
@@ -540,7 +540,7 @@ export default function AvailableTasksPage() {
                     </div>
 
                     <h3 className="text-base font-bold text-[#111827] line-clamp-1">
-                      {task.title}
+                      {parseTaskTitleAndInstructions(task.title).title}
                     </h3>
 
                     <div className="bg-[#F7F7F8] p-3 rounded-lg flex items-center justify-between">
@@ -559,8 +559,7 @@ export default function AvailableTasksPage() {
                     </div>
 
                     <p className="text-xs text-[#6B7280] line-clamp-2">
-                      Click Do Task (or select multiple if Pro), enter your Temu name/email, and
-                      accept the invite through the official Temu link.
+                      {parseTaskTitleAndInstructions(task.title).instructions}
                     </p>
                   </div>
 
@@ -720,19 +719,19 @@ export default function AvailableTasksPage() {
                     invites.
                   </p>
                 ) : (
-                  <p>
-                    1. Enter your Temu name &amp; email below for owner review.
-                    <br />
-                    2. Clicking Submit will record your submission and open the owner&apos;s Temu
-                    invite link.
-                    <br />
-                    3. You will earn{' '}
-                    <strong>
-                      {selectedTask &&
-                        formatNaira(BigInt(selectedTask.reward_per_participant_kobo))}
-                    </strong>{' '}
-                    once approved.
-                  </p>
+                  <div className="space-y-1.5">
+                    <p className="leading-relaxed">
+                      {parseTaskTitleAndInstructions(selectedTask?.title).instructions}
+                    </p>
+                    <p className="text-[#6B7280] border-t border-[#F95700]/15 pt-1 text-[11px]">
+                      You will earn{' '}
+                      <strong className="text-[#10B981]">
+                        {selectedTask &&
+                          formatNaira(BigInt(selectedTask.reward_per_participant_kobo))}
+                      </strong>{' '}
+                      once your submission is verified by the task owner.
+                    </p>
+                  </div>
                 )}
               </div>
 

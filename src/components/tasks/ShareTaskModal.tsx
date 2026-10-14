@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { formatNaira } from '@/lib/utils';
+import { formatNaira, parseTaskTitleAndInstructions } from '@/lib/utils';
 import {
   Share2,
   Copy,
@@ -151,7 +151,9 @@ export function ShareTaskModal({
             <span className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider block">
               Task
             </span>
-            <h4 className="text-sm font-bold text-[#111827] truncate">{task.title}</h4>
+            <h4 className="text-sm font-bold text-[#111827] truncate">
+              {parseTaskTitleAndInstructions(task.title).title}
+            </h4>
             <span className="text-xs text-[#10B981] font-semibold mt-0.5 inline-block">
               Earn {rewardFormatted} / participant
             </span>
