@@ -40,6 +40,20 @@ export async function initiateNovacPayment(params: NovacInitiateParams): Promise
     channel: 'opay',
     defaultChannel: 'opay',
     paymentChannel: 'opay',
+    preferredBank: 'optimus',
+    preferred_bank: 'optimus',
+    defaultBank: 'optimus',
+    default_bank: 'optimus',
+    bank: 'optimus',
+    bankName: 'OPTIMUS BANK',
+    bankCode: '000036',
+    virtualAccountBank: 'optimus',
+    metaData: JSON.stringify({
+      preferredBank: 'optimus',
+      defaultBank: 'optimus',
+      bankName: 'OPTIMUS BANK',
+      bankCode: '000036',
+    }),
     checkoutCustomerData: {
       email: params.email,
       firstName: params.firstName || 'Customer',
@@ -52,6 +66,12 @@ export async function initiateNovacPayment(params: NovacInitiateParams): Promise
       channel: 'opay',
       defaultChannel: 'opay',
       paymentChannel: 'opay',
+      preferredBank: 'optimus',
+      defaultBank: 'optimus',
+      bank: 'optimus',
+      bankName: 'OPTIMUS BANK',
+      bankCode: '000036',
+      virtualAccountBank: 'optimus',
     },
   };
 
