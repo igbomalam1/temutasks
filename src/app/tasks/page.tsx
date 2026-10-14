@@ -19,6 +19,8 @@ import {
   CheckSquare,
   Square,
   Share2,
+  Eye,
+  X,
 } from 'lucide-react';
 import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
 
@@ -39,6 +41,14 @@ export default function AvailableTasksPage() {
   const [featuredSharedTask, setFeaturedSharedTask] = useState<any | null>(null);
   const [sharedTaskId, setSharedTaskId] = useState<string | null>(null);
 
+  // View rejection proof modal
+  const [viewProofModal, setViewProofModal] = useState<{
+    isOpen: boolean;
+    taskTitle?: string;
+    reason: string;
+    proofUrl?: string;
+  }>({ isOpen: false, reason: '' });
+
   // Modal submission state
   const [temuUsername, setTemuUsername] = useState('');
   const [temuEmail, setTemuEmail] = useState('');
@@ -51,6 +61,25 @@ export default function AvailableTasksPage() {
 
   const supabase = createClient();
   const isPro = profile?.tier === 'pro';
+
+  const parseDeclineReason = (raw: string | null | undefined): { reason: string; proofUrl?: string } => {
+    if (!raw) return { reason: 'No explanation provided' };
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return {
+          reason: parsed.reason || 'No explanation provided',
+          proofUrl: parsed.proofUrl || parsed.proof_url || undefined,
+        };
+      }
+    } catch {
+      if (raw.includes('| Proof: ')) {
+        const [r, p] = raw.split('| Proof: ');
+        return { reason: r.trim(), proofUrl: p.trim() };
+      }
+    }
+    return { reason: raw, proofUrl: undefined };
+  };
 
   const loadTasks = async () => {
     setIsLoading(true);
@@ -70,7 +99,7 @@ export default function AvailableTasksPage() {
       if (user) {
         const { data: subs } = await supabase
           .from('temutask_submissions')
-          .select('task_id, status')
+          .select('task_id, status, decline_reason')
           .eq('participant_id', user.id);
 
         if (subs) {
@@ -552,9 +581,30 @@ export default function AvailableTasksPage() {
                       </div>
                     ) : alreadySubmitted ? (
                       <div className="flex items-center gap-2 w-full">
-                        <Button size="sm" variant="secondary" className="flex-1" disabled>
-                          Submitted ({userSubmissions[task.id].status.replace('_', ' ')})
-                        </Button>
+                        {userSubmissions[task.id]?.status === 'declined_disputed' ? (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            className="flex-1 text-xs"
+                            onClick={() => {
+                              const { reason, proofUrl } = parseDeclineReason(
+                                userSubmissions[task.id].decline_reason
+                              );
+                              setViewProofModal({
+                                isOpen: true,
+                                taskTitle: task.title,
+                                reason,
+                                proofUrl,
+                              });
+                            }}
+                          >
+                            Declined (View Proof)
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="secondary" className="flex-1" disabled>
+                            Submitted ({userSubmissions[task.id].status.replace('_', ' ')})
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -801,6 +851,78 @@ export default function AvailableTasksPage() {
           task={shareTask}
           referralCode={profile?.referral_code}
         />
+
+        {/* Rejection Reason & Proof Modal */}
+        {viewProofModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in">
+            <Card className="max-w-lg w-full p-6 space-y-4 shadow-2xl bg-white max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+                <div>
+                  <h3 className="text-base font-bold text-[#111827]">Submission Rejected</h3>
+                  {viewProofModal.taskTitle && (
+                    <p className="text-xs text-[#6B7280]">
+                      Task: <strong>{viewProofModal.taskTitle}</strong>
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewProofModal({ isOpen: false, reason: '' })}
+                  className="text-[#9CA3AF] hover:text-[#111827] p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3.5 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#991B1B] space-y-1">
+                  <span className="font-bold block">Owner&apos;s Stated Reason:</span>
+                  <p className="leading-relaxed">{viewProofModal.reason}</p>
+                </div>
+
+                {viewProofModal.proofUrl ? (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-[#111827] block">Proof Screenshot from Task Creator:</span>
+                    <div className="rounded-xl border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] p-1 text-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={viewProofModal.proofUrl}
+                        alt="Rejection Proof"
+                        className="w-full max-h-[400px] object-contain rounded-lg mx-auto"
+                      />
+                    </div>
+                    <div className="text-right">
+                      <a
+                        href={viewProofModal.proofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-semibold text-[#F95700] hover:underline inline-flex items-center gap-1"
+                      >
+                        Open Full Screenshot <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#9CA3AF] italic">No proof screenshot was attached.</p>
+                )}
+
+                <div className="p-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-[11px] text-[#92400E]">
+                  <strong>Nightly Admin Dispute Notice:</strong> All rejected submissions are automatically queued for nightly administrator review (11:00 PM Lagos). If the task owner improperly rejected a valid submission, our system will reverse the decline and credit your reward.
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-[#E5E7EB]">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setViewProofModal({ isOpen: false, reason: '' })}
+                >
+                  Close
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     </AppShell>
   );

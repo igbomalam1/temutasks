@@ -12,6 +12,7 @@ import {
   Link as LinkIcon,
   Users,
   AlertCircle,
+  AlertTriangle,
   CreditCard,
   ShieldCheck,
   TrendingUp,
@@ -20,7 +21,7 @@ import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
 
 export default function CreateTaskPage() {
   const [taskType, setTaskType] = useState<'existing_user' | 'new_user'>('existing_user');
-  const [pricePerParticipant, setPricePerParticipant] = useState<number>(55);
+  const [pricePerParticipant, setPricePerParticipant] = useState<number>(100);
   const [quantity, setQuantity] = useState<number>(10);
   const [invitationLink, setInvitationLink] = useState('');
   const [isPremium, setIsPremium] = useState(false);
@@ -40,27 +41,24 @@ export default function CreateTaskPage() {
     message: '',
   });
 
-  const minPrice = taskType === 'existing_user' ? 55 : 250;
+  const recommendedPrice = taskType === 'existing_user' ? 100 : 500;
+  const minPrice = taskType === 'existing_user' ? 30 : 100;
 
-  // Handle switching task type and adjusting price if below new threshold
+  // Handle switching task type and defaulting to recommended amounts
   const handleSelectTaskType = (type: 'existing_user' | 'new_user') => {
     setTaskType(type);
-    const newMin = type === 'existing_user' ? 55 : 250;
-    if (pricePerParticipant < newMin || (type === 'existing_user' && pricePerParticipant === 250)) {
-      setPricePerParticipant(newMin);
-    }
+    const newRecommended = type === 'existing_user' ? 100 : 500;
+    setPricePerParticipant(newRecommended);
   };
 
-  // Calculate proportional split in kobo using the baseline matrix:
-  // - Existing User (baseline 55): Participant = 45/55 (~81.82%), Referrer = 10/55 (~18.18%)
-  // - New User (baseline 250): Participant = 200/250 (80.00%), Referrer = 50/250 (20.00%)
+  // Calculate proportional split in kobo (80% Participant, 20% Referrer commission):
   const effectivePrice = Math.max(pricePerParticipant || 0, minPrice);
   const priceKobo = BigInt(Math.round(effectivePrice * 100));
 
   const participantRewardKobo =
     taskType === 'new_user'
-      ? (priceKobo * BigInt(200)) / BigInt(250)
-      : (priceKobo * BigInt(45)) / BigInt(55);
+      ? (priceKobo * BigInt(400)) / BigInt(500)
+      : (priceKobo * BigInt(80)) / BigInt(100);
 
   const referrerCommissionKobo = priceKobo - participantRewardKobo;
 
@@ -194,11 +192,11 @@ export default function CreateTaskPage() {
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold text-sm text-[#111827]">Existing Temu User</span>
                   <Badge variant={taskType === 'existing_user' ? 'primary' : 'secondary'}>
-                    Min ₦55 / person
+                    Default ₦100 / person
                   </Badge>
                 </div>
                 <p className="text-xs text-[#6B7280]">
-                  Participants who already have the Temu app installed.
+                  Participants who already have the Temu app installed. Recommended ₦100 (customizable).
                 </p>
               </div>
 
@@ -213,11 +211,11 @@ export default function CreateTaskPage() {
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold text-sm text-[#111827]">New Temu User</span>
                   <Badge variant={taskType === 'new_user' ? 'premium' : 'secondary'}>
-                    Min ₦250 / person
+                    Default ₦500 / person
                   </Badge>
                 </div>
                 <p className="text-xs text-[#6B7280]">
-                  Participants downloading or registering Temu for the first time.
+                  Participants downloading or registering Temu for the first time. Recommended ₦500 (customizable).
                 </p>
               </div>
             </div>
@@ -225,18 +223,23 @@ export default function CreateTaskPage() {
 
           {/* Step 2: Custom Price Per Participant & Split Matrix */}
           <Card className="space-y-4">
-            <label className="block text-xs font-bold text-[#111827] uppercase tracking-wider">
-              Step 2: Price Per Participant &amp; Reward Split
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-[#111827] uppercase tracking-wider">
+                Step 2: Price Per Participant &amp; Reward Split
+              </label>
+              <span className="text-[11px] text-[#6B7280]">
+                Recommended: <strong className="text-[#111827]">₦{recommendedPrice}</strong>
+              </span>
+            </div>
 
             <Input
-              label={`Price Per Participant (₦, Minimum Threshold: ₦${minPrice})`}
+              label={`Price Per Participant (₦, Recommended: ₦${recommendedPrice})`}
               type="number"
               min={minPrice}
               step="1"
               value={pricePerParticipant ? pricePerParticipant.toString() : ''}
               onChange={(e) => setPricePerParticipant(parseInt(e.target.value, 10) || 0)}
-              hint={`You can increase the price above ₦${minPrice} to incentivize participants to complete your task faster.`}
+              hint={`Default is ₦${recommendedPrice}. You can adjust this amount, but pricing below ₦${recommendedPrice} may result in slower task completion.`}
               required
             />
 
@@ -244,6 +247,29 @@ export default function CreateTaskPage() {
               <p className="text-xs text-[#EF4444] font-semibold">
                 Minimum price threshold for this task type is ₦{minPrice}.
               </p>
+            )}
+
+            {/* Warning when edited below recommended price */}
+            {pricePerParticipant >= minPrice && pricePerParticipant < recommendedPrice && (
+              <div className="p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold text-xs text-[#92400E]">
+                    Warning: This price (₦{pricePerParticipant}) might not get users
+                  </p>
+                  <p className="text-[11px] text-[#B45309] leading-relaxed">
+                    Users actively prioritize tasks with the default reward of ₦{recommendedPrice} or higher. 
+                    Offering a lower reward may cause your task to remain incomplete or take significantly longer to attract participants.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPricePerParticipant(recommendedPrice)}
+                    className="text-[11px] font-bold text-[#F95700] underline hover:opacity-80 pt-0.5 inline-block"
+                  >
+                    Reset to recommended ₦{recommendedPrice}
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Live Proportional Matrix Preview */}
@@ -259,7 +285,7 @@ export default function CreateTaskPage() {
               <div className="grid grid-cols-2 gap-3 pt-1 text-xs">
                 <div className="bg-white p-2.5 rounded-lg border border-[#E5E7EB]">
                   <span className="text-[#6B7280] block text-[11px]">
-                    Participant Reward ({taskType === 'new_user' ? '80%' : '81.82%'})
+                    Participant Reward (80%)
                   </span>
                   <span className="text-sm font-extrabold text-[#10B981]">
                     {formatNaira(participantRewardKobo)}
@@ -268,7 +294,7 @@ export default function CreateTaskPage() {
 
                 <div className="bg-white p-2.5 rounded-lg border border-[#E5E7EB]">
                   <span className="text-[#6B7280] block text-[11px]">
-                    Referrer Commission ({taskType === 'new_user' ? '20%' : '18.18%'})
+                    Referrer Commission (20%)
                   </span>
                   <span className="text-sm font-extrabold text-[#111827]">
                     {formatNaira(referrerCommissionKobo)}

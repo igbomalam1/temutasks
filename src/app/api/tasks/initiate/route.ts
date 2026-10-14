@@ -26,17 +26,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid HTTPS invitation link is required' }, { status: 400 });
     }
 
-    // Threshold enforcement: Minimum ₦55 for existing_user, Minimum ₦250 for new_user
-    const minPriceNaira = taskType === 'new_user' ? 250 : 55;
+    // Threshold enforcement: Recommended ₦100 for existing_user, ₦500 for new_user
+    // Lower floor allows creator flexibility (min ₦30 for existing, ₦100 for new)
+    const recommendedPriceNaira = taskType === 'new_user' ? 500 : 100;
+    const minPriceNaira = taskType === 'new_user' ? 100 : 30;
     const requestedPriceNaira =
       customPrice !== undefined && customPrice !== null
         ? Number(customPrice)
-        : minPriceNaira;
+        : recommendedPriceNaira;
 
     if (isNaN(requestedPriceNaira) || requestedPriceNaira < minPriceNaira) {
       return NextResponse.json(
         {
-          error: `Price per participant cannot be below the minimum threshold of ₦${minPriceNaira} for ${
+          error: `Price per participant cannot be below ₦${minPriceNaira} for ${
             taskType === 'new_user' ? 'New Temu User' : 'Existing Temu User'
           } tasks.`,
         },
@@ -46,17 +48,15 @@ export async function POST(request: Request) {
 
     const pricePerParticipantKobo = BigInt(Math.round(requestedPriceNaira * 100));
 
-    // Proportional split using the exact baseline matrix:
-    // - Existing User (baseline 55): Participant = 45/55 (~81.82%), Referrer = 10/55 (~18.18%)
-    // - New User (baseline 250): Participant = 200/250 (80.00%), Referrer = 50/250 (20.00%)
+    // Proportional split (80% Participant reward, 20% Referrer commission)
     let rewardPerPartKobo: bigint;
     let commPerRefKobo: bigint;
 
     if (taskType === 'new_user') {
-      rewardPerPartKobo = (pricePerParticipantKobo * BigInt(200)) / BigInt(250);
+      rewardPerPartKobo = (pricePerParticipantKobo * BigInt(400)) / BigInt(500);
       commPerRefKobo = pricePerParticipantKobo - rewardPerPartKobo;
     } else {
-      rewardPerPartKobo = (pricePerParticipantKobo * BigInt(45)) / BigInt(55);
+      rewardPerPartKobo = (pricePerParticipantKobo * BigInt(80)) / BigInt(100);
       commPerRefKobo = pricePerParticipantKobo - rewardPerPartKobo;
     }
 

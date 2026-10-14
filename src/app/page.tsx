@@ -15,6 +15,7 @@ import {
   Smartphone,
   CheckCircle2,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -124,6 +125,119 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section className="py-14 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+        <div className="text-center mb-10">
+          <Badge variant="primary" className="mb-2 px-3 py-1 text-xs">
+            Simple 4-Step Process
+          </Badge>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827]">
+            How TemuTasks Works
+          </h2>
+          <p className="text-sm text-[#6B7280] max-w-lg mx-auto mt-1.5">
+            Follow four simple steps to complete tasks and earn real cash credited directly to your wallet.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          {/* Step 1 */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between hover:border-[#F95700]/50 transition-all">
+            <div>
+              <div className="w-9 h-9 rounded-lg bg-[#FFF5F0] text-[#F95700] font-black flex items-center justify-center text-base mb-3">
+                1
+              </div>
+              <h3 className="text-sm font-bold text-[#111827] mb-1">
+                Download &amp; Register
+              </h3>
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                Download the Temu app and register your account, or prepare your existing Temu account.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F3F4F6] text-[11px] font-semibold text-[#F95700]">
+              Android &amp; iOS compatible
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between hover:border-[#F95700]/50 transition-all">
+            <div>
+              <div className="w-9 h-9 rounded-lg bg-[#EFF6FF] text-[#0090FE] font-black flex items-center justify-center text-base mb-3">
+                2
+              </div>
+              <h3 className="text-sm font-bold text-[#111827] mb-1">
+                Join Task &amp; Click Link
+              </h3>
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                Browse open tasks on TemuTasks, click the creator&apos;s link, and open it in the Temu app.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F3F4F6] text-[11px] font-semibold text-[#0090FE]">
+              Real-time available slots
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between hover:border-[#F95700]/50 transition-all">
+            <div>
+              <div className="w-9 h-9 rounded-lg bg-[#FEF3C7] text-[#D97706] font-black flex items-center justify-center text-base mb-3">
+                3
+              </div>
+              <h3 className="text-sm font-bold text-[#111827] mb-1">
+                Complete &amp; Submit Proof
+              </h3>
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                Accept the invitation on Temu, then return to TemuTasks and submit your Temu username / email.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F3F4F6] text-[11px] font-semibold text-[#D97706]">
+              Instant submission tracking
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between hover:border-[#F95700]/50 transition-all">
+            <div>
+              <div className="w-9 h-9 rounded-lg bg-[#ECFDF5] text-[#10B981] font-black flex items-center justify-center text-base mb-3">
+                4
+              </div>
+              <h3 className="text-sm font-bold text-[#111827] mb-1">
+                Get Verified &amp; Get Paid
+              </h3>
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                Once verified by the task owner, your wallet is credited! Cash out to bank or buy instant airtime.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F3F4F6] text-[11px] font-semibold text-[#10B981]">
+              Instant OPay, PalmPay &amp; VTU
+            </div>
+          </div>
+        </div>
+
+        {/* Pro Upsell Callout Banner */}
+        <div className="bg-gradient-to-r from-[#111827] to-[#1E293B] rounded-2xl p-6 sm:p-7 text-white shadow-md border border-[#334155] flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F95700]/20 border border-[#F95700]/40 text-[#F95700] text-[11px] font-bold uppercase tracking-wider">
+              <Sparkles className="w-3 h-3" />
+              Pro Earner Advantage
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-white">
+              Want to submit many tasks on a single task?
+            </h3>
+            <p className="text-xs sm:text-sm text-[#94A3B8] leading-relaxed">
+              Standard users can only submit once per task. Upgrade to <strong>TemuTasks Pro</strong> for just ₦200 to submit multiple times on the same task and earn for your total submissions!
+            </p>
+          </div>
+
+          <div className="shrink-0 flex items-center">
+            <Link href="/pro" className="w-full sm:w-auto">
+              <Button size="lg" variant="primary" className="w-full sm:w-auto text-sm font-bold shadow-md">
+                Upgrade to Pro (₦200) →
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Photo Collage of Testimonies and Proof */}
       <TestimonyCollage />
 
@@ -143,16 +257,16 @@ export default function LandingPage() {
             <div className="border border-[#E5E7EB] rounded-xl p-6 bg-[#F7F7F8]">
               <div className="flex justify-between items-center mb-4">
                 <span className="font-bold text-base text-[#111827]">Existing Temu User Task</span>
-                <Badge variant="primary">₦55 / slot</Badge>
+                <Badge variant="primary">₦100 / slot</Badge>
               </div>
               <ul className="space-y-2.5 text-sm text-[#4B5563]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                  <span>Participant reward: <strong>₦45.00</strong></span>
+                  <span>Participant reward: <strong>₦80.00</strong></span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                  <span>Referrer lifetime commission: <strong>₦10.00</strong></span>
+                  <span>Referrer lifetime commission: <strong>₦20.00</strong></span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
@@ -164,16 +278,16 @@ export default function LandingPage() {
             <div className="border border-[#E5E7EB] rounded-xl p-6 bg-[#F7F7F8]">
               <div className="flex justify-between items-center mb-4">
                 <span className="font-bold text-base text-[#111827]">New Temu User Task</span>
-                <Badge variant="premium">₦250 / slot</Badge>
+                <Badge variant="premium">₦500 / slot</Badge>
               </div>
               <ul className="space-y-2.5 text-sm text-[#4B5563]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                  <span>Participant reward: <strong>₦200.00</strong></span>
+                  <span>Participant reward: <strong>₦400.00</strong></span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                  <span>Referrer lifetime commission: <strong>₦50.00</strong></span>
+                  <span>Referrer lifetime commission: <strong>₦100.00</strong></span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#10B981]" />

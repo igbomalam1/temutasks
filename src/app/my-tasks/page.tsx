@@ -21,6 +21,10 @@ import {
   AlertCircle,
   PlusCircle,
   Share2,
+  Eye,
+  UploadCloud,
+  X,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
 
@@ -32,9 +36,18 @@ export default function MyTasksPage() {
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [shareTask, setShareTask] = useState<any | null>(null);
 
-  // Decline dialog state
+  // Decline dialog & rejection proof state
   const [declineSubId, setDeclineSubId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState('');
+  const [declineFile, setDeclineFile] = useState<File | null>(null);
+  const [declineFilePreview, setDeclineFilePreview] = useState<string | null>(null);
+  const [viewProofModal, setViewProofModal] = useState<{
+    isOpen: boolean;
+    reason: string;
+    proofUrl?: string;
+    username?: string;
+  }>({ isOpen: false, reason: '' });
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(
     null
@@ -127,14 +140,78 @@ export default function MyTasksPage() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setActionMsg({ text: 'Please select an image file (PNG, JPG, WEBP).', type: 'error' });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setActionMsg({ text: 'Image file size must be under 5MB.', type: 'error' });
+        return;
+      }
+      setDeclineFile(file);
+      setDeclineFilePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const parseDeclineReason = (raw: string | null | undefined): { reason: string; proofUrl?: string } => {
+    if (!raw) return { reason: 'No explanation provided' };
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return {
+          reason: parsed.reason || 'No explanation provided',
+          proofUrl: parsed.proofUrl || parsed.proof_url || undefined,
+        };
+      }
+    } catch {
+      if (raw.includes('| Proof: ')) {
+        const [r, p] = raw.split('| Proof: ');
+        return { reason: r.trim(), proofUrl: p.trim() };
+      }
+    }
+    return { reason: raw, proofUrl: undefined };
+  };
+
   const handleDecline = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!declineSubId) return;
+
+    if (!declineFile) {
+      setActionMsg({
+        text: 'Please upload an image screenshot proving why this submission is being rejected.',
+        type: 'error',
+      });
+      return;
+    }
 
     setIsProcessing(true);
     setActionMsg(null);
 
     try {
+      // 1. Upload proof screenshot to Supabase Storage bucket
+      const ext = declineFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const cleanSubId = declineSubId.replace(/[^a-zA-Z0-9]/g, '');
+      const filePath = `rejections/${cleanSubId}-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('temutask-proofs')
+        .upload(filePath, declineFile, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload proof image: ${uploadError.message}`);
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('temutask-proofs')
+        .getPublicUrl(filePath);
+
+      // 2. Call review API with structured reason and proofUrl
       const res = await fetch('/api/tasks/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,6 +219,7 @@ export default function MyTasksPage() {
           submissionId: declineSubId,
           action: 'decline',
           reason: declineReason.trim(),
+          proofUrl,
         }),
       });
 
@@ -150,11 +228,13 @@ export default function MyTasksPage() {
         setActionMsg({ text: data.error || 'Failed to decline submission', type: 'error' });
       } else {
         setActionMsg({
-          text: 'Submission declined and placed into nightly admin dispute queue.',
+          text: 'Submission rejected with proof image attached and queued for nightly admin dispute review.',
           type: 'success',
         });
         setDeclineSubId(null);
         setDeclineReason('');
+        setDeclineFile(null);
+        setDeclineFilePreview(null);
         await loadMyTasks();
       }
     } catch (err: any) {
@@ -313,17 +393,42 @@ export default function MyTasksPage() {
                                     {sub.temu_email}
                                   </td>
                                   <td className="p-2.5">
-                                    <Badge
-                                      variant={
-                                        sub.status === 'approved' || sub.status === 'auto_approved'
-                                          ? 'success'
-                                          : sub.status === 'pending_review'
-                                          ? 'warning'
-                                          : 'danger'
-                                      }
-                                    >
-                                      {sub.status.replace('_', ' ')}
-                                    </Badge>
+                                    {sub.status === 'declined_disputed' ? (
+                                      <div className="space-y-1">
+                                        <Badge variant="danger">Declined</Badge>
+                                        {(() => {
+                                          const { reason, proofUrl } = parseDeclineReason(sub.decline_reason);
+                                          return (
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                setViewProofModal({
+                                                  isOpen: true,
+                                                  reason,
+                                                  proofUrl,
+                                                  username: sub.temu_username,
+                                                })
+                                              }
+                                              className="text-[11px] font-bold text-[#F95700] hover:underline flex items-center gap-1"
+                                            >
+                                              <Eye className="w-3 h-3" /> Proof Image
+                                            </button>
+                                          );
+                                        })()}
+                                      </div>
+                                    ) : (
+                                      <Badge
+                                        variant={
+                                          sub.status === 'approved' || sub.status === 'auto_approved'
+                                            ? 'success'
+                                            : sub.status === 'pending_review'
+                                            ? 'warning'
+                                            : 'danger'
+                                        }
+                                      >
+                                        {sub.status.replace('_', ' ')}
+                                      </Badge>
+                                    )}
                                   </td>
                                   <td className="p-2.5 text-[#9CA3AF]">
                                     {new Date(sub.created_at).toLocaleString('en-NG', {
@@ -352,10 +457,12 @@ export default function MyTasksPage() {
                                           onClick={() => {
                                             setDeclineSubId(sub.id);
                                             setDeclineReason('');
+                                            setDeclineFile(null);
+                                            setDeclineFilePreview(null);
                                           }}
                                           disabled={isProcessing}
                                         >
-                                          Decline
+                                          Reject
                                         </Button>
                                       </div>
                                     ) : (
@@ -376,31 +483,93 @@ export default function MyTasksPage() {
           </div>
         )}
 
-        {/* Decline Reason Modal */}
+        {/* Decline / Reject Reason & Proof Modal */}
         {declineSubId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
-            <Card className="max-w-md w-full p-6 space-y-4 shadow-xl">
-              <h3 className="text-base font-bold text-[#111827]">Decline Submission</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in">
+            <Card className="max-w-md w-full p-6 space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-[#111827]">Reject Submission &amp; Upload Proof</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeclineSubId(null);
+                    setDeclineFile(null);
+                    setDeclineFilePreview(null);
+                  }}
+                  className="text-[#9CA3AF] hover:text-[#111827]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
               <p className="text-xs text-[#6B7280]">
-                Declining will send this submission into the nightly administrator dispute review.
-                Please state the reason (e.g. invite not showing in Temu records):
+                To maintain fairness, you must state why you are rejecting this submission and upload a screenshot from your Temu app proving the user didn&apos;t qualify.
               </p>
 
               <form onSubmit={handleDecline} className="space-y-4">
                 <Input
-                  label="Decline Reason"
-                  placeholder="e.g. Invitation did not register on my Temu game"
+                  label="Rejection Reason"
+                  placeholder="e.g. Invitation limit reached / User did not register"
                   value={declineReason}
                   onChange={(e) => setDeclineReason(e.target.value)}
                   required
                 />
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[#111827]">
+                    Proof Screenshot (Temu Record) <span className="text-[#EF4444]">*</span>
+                  </label>
+
+                  {declineFilePreview ? (
+                    <div className="relative rounded-xl border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={declineFilePreview}
+                        alt="Rejection Proof Preview"
+                        className="w-full max-h-48 object-contain rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeclineFile(null);
+                          setDeclineFilePreview(null);
+                        }}
+                        className="absolute top-3 right-3 bg-red-600 text-white rounded-full p-1 shadow-md hover:bg-red-700"
+                        title="Remove image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#D1D5DB] hover:border-[#F95700] rounded-xl p-4 cursor-pointer bg-[#F9FAFB] hover:bg-[#FFF5F0]/30 transition-all text-center">
+                      <UploadCloud className="w-8 h-8 text-[#9CA3AF] mb-1.5" />
+                      <span className="text-xs font-semibold text-[#111827]">
+                        Upload Proof Screenshot
+                      </span>
+                      <span className="text-[11px] text-[#6B7280] mt-0.5">
+                        PNG, JPG or WEBP (Max 5MB)
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        required
+                      />
+                    </label>
+                  )}
+                </div>
 
                 <div className="flex justify-end gap-3 pt-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setDeclineSubId(null)}
+                    onClick={() => {
+                      setDeclineSubId(null);
+                      setDeclineFile(null);
+                      setDeclineFilePreview(null);
+                    }}
                     disabled={isProcessing}
                   >
                     Cancel
@@ -410,11 +579,80 @@ export default function MyTasksPage() {
                     variant="danger"
                     size="sm"
                     isLoading={isProcessing}
+                    disabled={!declineFile || !declineReason.trim()}
                   >
-                    Confirm Decline
+                    Confirm Reject
                   </Button>
                 </div>
               </form>
+            </Card>
+          </div>
+        )}
+
+        {/* View Proof Lightbox Modal */}
+        {viewProofModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in">
+            <Card className="max-w-lg w-full p-6 space-y-4 shadow-2xl bg-white max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+                <div>
+                  <h3 className="text-base font-bold text-[#111827]">Rejection Proof Screenshot</h3>
+                  {viewProofModal.username && (
+                    <p className="text-xs text-[#6B7280]">
+                      User: <strong>{viewProofModal.username}</strong>
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewProofModal({ isOpen: false, reason: '' })}
+                  className="text-[#9CA3AF] hover:text-[#111827] p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#991B1B]">
+                  <span className="font-bold block mb-0.5">Stated Rejection Reason:</span>
+                  <p>{viewProofModal.reason}</p>
+                </div>
+
+                {viewProofModal.proofUrl ? (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-[#111827] block">Proof Image:</span>
+                    <div className="rounded-xl border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] p-1 text-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={viewProofModal.proofUrl}
+                        alt="Rejection Proof"
+                        className="w-full max-h-[400px] object-contain rounded-lg mx-auto"
+                      />
+                    </div>
+                    <div className="text-right">
+                      <a
+                        href={viewProofModal.proofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-semibold text-[#F95700] hover:underline inline-flex items-center gap-1"
+                      >
+                        Open Full Image in New Tab <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#9CA3AF] italic">No proof screenshot was attached.</p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-[#E5E7EB]">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setViewProofModal({ isOpen: false, reason: '' })}
+                >
+                  Close
+                </Button>
+              </div>
             </Card>
           </div>
         )}

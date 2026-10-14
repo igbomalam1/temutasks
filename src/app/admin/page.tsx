@@ -1210,12 +1210,12 @@ export default function AdminDashboardPage() {
               <h3 className="text-base font-bold text-[#111827]">Platform Default Configuration</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">Existing User Price Threshold / Split</span>
-                  <span className="font-bold text-sm text-[#111827]">₦55 min (₦45 / ₦10)</span>
+                  <span className="text-[#6B7280] block">Existing User Price Default / Split</span>
+                  <span className="font-bold text-sm text-[#111827]">₦100 (₦80 / ₦20)</span>
                 </div>
                 <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">New User Price Threshold / Split</span>
-                  <span className="font-bold text-sm text-[#111827]">₦250 min (₦200 / ₦50)</span>
+                  <span className="text-[#6B7280] block">New User Price Default / Split</span>
+                  <span className="font-bold text-sm text-[#111827]">₦500 (₦400 / ₦100)</span>
                 </div>
                 <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
                   <span className="text-[#6B7280] block">Standard Platform Fee / Premium Add-on</span>

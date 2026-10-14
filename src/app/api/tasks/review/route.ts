@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { submissionId, action, reason } = await request.json();
+    const { submissionId, action, reason, proofUrl } = await request.json();
 
     if (!submissionId || !action || !['approve', 'decline'].includes(action)) {
       return NextResponse.json({ error: 'Invalid review payload' }, { status: 400 });
@@ -52,11 +52,15 @@ export async function POST(request: Request) {
 
     // DECLINE FLOW
     if (action === 'decline') {
+      const declinePayload = proofUrl
+        ? JSON.stringify({ reason: reason || 'Task owner declined submission', proofUrl })
+        : (reason || 'Task owner declined submission');
+
       await adminSupabase
         .from('temutask_submissions')
         .update({
           status: 'declined_disputed',
-          decline_reason: reason || 'Task owner declined submission',
+          decline_reason: declinePayload,
           reviewed_by: user.id,
           reviewed_at: new Date().toISOString(),
         })
@@ -66,7 +70,7 @@ export async function POST(request: Request) {
       await adminSupabase.from('temutask_notifications').insert({
         user_id: sub.participant_id,
         title: 'Submission Declined — Pending Admin Review',
-        message: `Your submission for task "${task.title}" was declined by the owner with reason: "${reason || 'Unspecified'}". Our admin team will verify it during nightly reviews.`,
+        message: `Your submission for task "${task.title}" was declined by the owner with reason: "${reason || 'Unspecified'}".${proofUrl ? ' A rejection proof screenshot has been provided.' : ''} Our admin team will verify it during nightly reviews.`,
         type: 'submission_declined',
         link: '/tasks',
       });

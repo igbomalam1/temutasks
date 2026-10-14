@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS public.temutask_submissions (
     temu_email TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending_review' CHECK (status IN ('pending_review', 'approved', 'declined_disputed', 'rejected', 'auto_approved')),
     decline_reason TEXT,
+    rejection_proof_url TEXT,
     reviewed_by UUID REFERENCES public.temutask_profiles(id) ON DELETE SET NULL,
     reviewed_at TIMESTAMPTZ,
     reward_kobo BIGINT NOT NULL,

@@ -36,16 +36,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid 11-digit mobile phone number is required (e.g. 08012345678)' }, { status: 400 });
     }
 
-    const amountKobo = BigInt(amt) * BigInt(100);
+    const platformFeeNaira = 10;
+    const totalChargeNaira = amt + platformFeeNaira;
+    const amountKobo = BigInt(totalChargeNaira) * BigInt(100);
     const reference = generateRef('AIR');
 
-    // 1. Atomically debit user wallet before calling external airtime provider
+    // 1. Atomically debit user wallet (face value + ₦10 platform fee)
     const debitResult = await executeWalletTransaction({
       userId: user.id,
       amountKobo,
       direction: 'debit',
       transactionType: 'airtime_debit',
-      description: `Airtime purchase of ₦${amt} on ${network} (${phone})`,
+      description: `Airtime purchase of ₦${amt} on ${network} (${cleanPhone}) [₦${amt} + ₦${platformFeeNaira} fee = ₦${totalChargeNaira}]`,
       relatedId: reference,
       idempotencyKey: `AIRTIME-${reference}`,
     });
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: debitResult.error || 'Insufficient wallet balance' }, { status: 400 });
     }
 
-    // 2. Call SmartAPI (Sabuss) provider
+    // 2. Call SmartAPI (Sabuss) provider with face value
     const airtimeResult = await purchaseAirtime({
       network,
       phone: cleanPhone,
@@ -77,20 +79,20 @@ export async function POST(request: Request) {
       status: status === 'successful' ? 'successful' : status === 'pending' ? 'pending' : 'failed',
     });
 
-    // 4. If transaction failed definitively (code 800/900), refund user wallet
+    // 4. If transaction failed definitively (code 800/900), refund full charged amount (including ₦10 fee)
     if (!airtimeResult.success && airtimeResult.code !== 400) {
       await executeWalletTransaction({
         userId: user.id,
         amountKobo,
         direction: 'credit',
         transactionType: 'airtime_refund',
-        description: `Refund: Failed airtime recharge on ${network} (${phone})`,
+        description: `Refund: Failed airtime recharge of ₦${amt} on ${network} (${cleanPhone}) [₦${totalChargeNaira} refunded]`,
         relatedId: reference,
         idempotencyKey: `REFUND-${reference}`,
       });
 
       return NextResponse.json({
-        error: `Recharge failed: ${airtimeResult.message}. Your wallet balance has been refunded.`,
+        error: `Recharge failed: ${airtimeResult.message}. Your wallet balance (₦${totalChargeNaira}) has been refunded.`,
       }, { status: 502 });
     }
 
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
       await adminSupabase.from('temutask_notifications').insert({
         user_id: user.id,
         title: 'Airtime Recharge Successful 📱',
-        message: `₦${amt.toLocaleString()} airtime to ${phone} (${network}) has been processed. Reference: ${reference}.`,
+        message: `₦${amt.toLocaleString()} airtime to ${cleanPhone} (${network}) has been processed for ₦${totalChargeNaira.toLocaleString()} (including ₦10 platform fee). Reference: ${reference}.`,
         type: 'airtime_purchase',
         link: '/wallet',
       });
@@ -109,8 +111,10 @@ export async function POST(request: Request) {
           title: 'Airtime Purchase Successful 📱',
           contentHtml: `<p>Your airtime recharge has been processed successfully:</p>
           <p><strong>Network:</strong> ${network}<br>
-          <strong>Phone:</strong> ${phone}<br>
-          <strong>Amount:</strong> ₦${amt.toLocaleString()}.00<br>
+          <strong>Phone:</strong> ${cleanPhone}<br>
+          <strong>Face Value:</strong> ₦${amt.toLocaleString()}.00<br>
+          <strong>Platform Fee:</strong> ₦${platformFeeNaira}.00<br>
+          <strong>Total Charged:</strong> ₦${totalChargeNaira.toLocaleString()}.00<br>
           <strong>Reference:</strong> ${reference}<br>
           <strong>Status:</strong> ${airtimeResult.status.toUpperCase()}</p>
           <p>The airtime will reflect on the destination number immediately.</p>`,

@@ -30,8 +30,8 @@ export default function TermsPage() {
 
             <h2 className="text-sm font-bold text-[#111827]">2. Task Creation & Pricing</h2>
             <p>
-              Task creators fund their tasks in advance. Existing-user slots are priced at ₦55 each,
-              and new-user slots at ₦250 each. A standard platform creation fee of ₦200 applies to every task.
+              Task creators fund their tasks in advance. Existing-user slots default to ₦100 each,
+              and new-user slots default to ₦500 each (both customizable). A standard platform creation fee of ₦200 applies to every task.
               Optional premium promotion (₦200) grants urgent badge visibility. Payments are processed
               securely via Novac.
             </p>

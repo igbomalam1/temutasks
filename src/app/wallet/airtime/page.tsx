@@ -34,8 +34,10 @@ export default function AirtimePage() {
     message: '',
   });
 
+  const PLATFORM_FEE = 10;
   const balance = BigInt(wallet?.balance_kobo || 0);
-  const costKobo = BigInt(amount || 0) * BigInt(100);
+  const totalChargeNaira = (amount || 0) + PLATFORM_FEE;
+  const costKobo = BigInt(totalChargeNaira) * BigInt(100);
 
   const networks = [
     { id: 'MTN', name: 'MTN Nigeria', color: '#FBBF24' },
@@ -43,6 +45,22 @@ export default function AirtimePage() {
     { id: 'GLO', name: 'Glo Mobile', color: '#10B981' },
     { id: '9MOBILE', name: '9mobile', color: '#059669' },
   ];
+
+  const detectNetworkFromPhone = (num: string): 'MTN' | 'AIRTEL' | 'GLO' | '9MOBILE' | null => {
+    let clean = num.replace(/[^0-9]/g, '');
+    if (clean.startsWith('234') && clean.length >= 7) {
+      clean = '0' + clean.slice(3);
+    }
+    if (clean.length < 4) return null;
+    const prefix = clean.slice(0, 4);
+    if (['0702', '0703', '0704', '0706', '0803', '0806', '0810', '0813', '0814', '0816', '0903', '0906', '0913', '0916'].includes(prefix)) return 'MTN';
+    if (['0802', '0808', '0708', '0812', '0701', '0902', '0901', '0904', '0907', '0912'].includes(prefix)) return 'AIRTEL';
+    if (['0805', '0807', '0705', '0815', '0811', '0905', '0915'].includes(prefix)) return 'GLO';
+    if (['0809', '0818', '0817', '0909', '0908'].includes(prefix)) return '9MOBILE';
+    return null;
+  };
+
+  const detectedNetwork = detectNetworkFromPhone(phone);
 
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +84,7 @@ export default function AirtimePage() {
     }
 
     if (costKobo > balance) {
-      setErrorMsg('Insufficient wallet balance. Complete more tasks or cash in.');
+      setErrorMsg(`Insufficient wallet balance. You need ₦${totalChargeNaira} (₦${amount} airtime + ₦${PLATFORM_FEE} platform fee).`);
       return;
     }
 
@@ -75,7 +93,7 @@ export default function AirtimePage() {
       isOpen: true,
       type: 'loading',
       title: 'Processing Airtime Recharge...',
-      message: `Connecting to ${network} and sending ₦${amount} to ${phone.trim()}. Please wait a moment...`,
+      message: `Connecting to ${network} and recharging ₦${amount} to ${phone.trim()} (Total charged: ₦${totalChargeNaira}). Please wait a moment...`,
     });
 
     try {
@@ -107,7 +125,7 @@ export default function AirtimePage() {
           isOpen: true,
           type: 'success',
           title: 'Airtime Recharged Successfully! 📱',
-          message: `₦${amount} ${network} airtime has been delivered to ${phone}. Transaction Ref: ${data.reference}`,
+          message: `₦${amount} ${network} airtime has been delivered to ${phone}. Total charged: ₦${totalChargeNaira} (including ₦${PLATFORM_FEE} platform fee). Ref: ${data.reference}`,
         });
         setPhone('');
         await refreshProfile();
@@ -136,7 +154,7 @@ export default function AirtimePage() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#111827]">Buy Instant Airtime</h1>
             <p className="text-xs text-[#6B7280]">
-              Direct VTU top-up powered by SmartAPI / Sabuss with instant delivery.
+              Direct VTU top-up powered by SmartAPI with instant delivery across all Nigerian networks.
             </p>
           </div>
         </div>
@@ -184,17 +202,41 @@ export default function AirtimePage() {
               </div>
             </div>
 
-            <Input
-              label="Recipient Phone Number"
-              placeholder="08012345678"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
+            <div>
+              <Input
+                label="Recipient Phone Number"
+                placeholder="08012345678"
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPhone(val);
+                  const detected = detectNetworkFromPhone(val);
+                  if (detected && detected !== network) {
+                    // auto-suggest or let user know
+                  }
+                }}
+                required
+              />
+
+              {detectedNetwork && detectedNetwork !== network && phone.length >= 4 && (
+                <div className="mt-1.5 p-2 bg-[#FFFBEB] border border-[#FDE68A] rounded-lg text-[11px] text-[#92400E] flex items-center justify-between">
+                  <span>
+                    Prefix looks like <strong>{detectedNetwork}</strong>. Selected is <strong>{network}</strong>.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setNetwork(detectedNetwork)}
+                    className="ml-2 font-bold text-[#F95700] underline shrink-0 hover:opacity-80"
+                  >
+                    Switch to {detectedNetwork}
+                  </button>
+                </div>
+              )}
+            </div>
 
             <Input
-              label="Recharge Amount (₦, Min ₦50)"
+              label="Recharge Face Value (₦, Min ₦50)"
               placeholder="50"
               type="number"
               min="50"
@@ -205,17 +247,40 @@ export default function AirtimePage() {
             />
 
             {/* Quick denomination buttons */}
-            <div className="flex flex-wrap gap-2 pt-1">
-              {[50, 100, 200, 500, 1000, 2000].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setAmount(amt)}
-                  className="px-3 py-1 rounded-md text-xs font-semibold bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#4B5563]"
-                >
-                  ₦{amt}
-                </button>
-              ))}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[11px] font-semibold text-[#6B7280]">Quick Amounts:</span>
+              <div className="flex flex-wrap gap-2">
+                {[50, 100, 200, 500, 1000, 2000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setAmount(amt)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                      amount === amt
+                        ? 'bg-[#F95700] text-white shadow-xs'
+                        : 'bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#4B5563]'
+                    }`}
+                  >
+                    ₦{amt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Transparent fee breakdown */}
+            <div className="p-3.5 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] text-xs space-y-2">
+              <div className="flex justify-between text-[#6B7280]">
+                <span>Airtime Face Value:</span>
+                <span className="font-semibold text-[#111827]">₦{(amount || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[#6B7280]">
+                <span>Platform Service Fee:</span>
+                <span className="font-semibold text-[#F95700]">+ ₦{PLATFORM_FEE}</span>
+              </div>
+              <div className="border-t border-[#E5E7EB] pt-2 flex justify-between font-bold text-sm text-[#111827]">
+                <span>Total Amount Charged:</span>
+                <span className="text-[#F95700]">₦{totalChargeNaira.toLocaleString()}</span>
+              </div>
             </div>
 
             <Button
@@ -224,9 +289,9 @@ export default function AirtimePage() {
               variant="primary"
               className="w-full text-base mt-2"
               isLoading={isLoading}
-              disabled={costKobo > balance || amount < 50}
+              disabled={costKobo > balance || (amount || 0) < 50}
             >
-              Pay {formatNairaPlain(amount)} with Wallet
+              Pay ₦{totalChargeNaira.toLocaleString()} with Wallet
             </Button>
           </form>
         </Card>

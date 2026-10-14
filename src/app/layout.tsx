@@ -5,9 +5,25 @@ import { AuthProvider } from "@/lib/auth/AuthContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top';
+
 export const metadata: Metadata = {
-  title: "TemuTasks — Get Temu Invites & Earn Rewards",
-  description: "Get real participants for your Temu invitation links, earn daily task rewards, and receive lifetime referral commissions.",
+  metadataBase: new URL(appUrl),
+  title: "TemuTasks — Get Temu Invites & Earn Daily Rewards",
+  description: "Complete simple Temu tasks, accept invite links, and earn ₦1,000 to ₦5,000 everyday with instant airtime and bank cashout.",
+  openGraph: {
+    title: "TemuTasks — Available Balance ₦10,000.00 | Complete Tasks & Earn Daily",
+    description: "Earn ₦1,000 to ₦5,000 everyday on TemuTasks! Withdraw your balance immediately to your bank or buy instant airtime on all networks.",
+    url: appUrl,
+    siteName: "TemuTasks",
+    locale: "en_NG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TemuTasks — Available Balance ₦10,000.00 | Complete Tasks & Earn Daily",
+    description: "Earn ₦1,000 to ₦5,000 everyday on TemuTasks! Withdraw your balance immediately to your bank or buy instant airtime on all networks.",
+  },
   icons: {
     icon: "/logo.svg",
   },
