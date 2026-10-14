@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const redirectUrl = `${appUrl}/api/payments/novac/callback?ref=${reference}&type=wallet_deposit`;
 
     // 1. Record pending payment order
-    const { error: orderError } = await adminSupabase.from('temutask_payment_orders').insert({
+    let { error: orderError } = await adminSupabase.from('temutask_payment_orders').insert({
       user_id: user.id,
       order_type: 'wallet_deposit',
       amount_kobo: amountKobo.toString(),
@@ -35,9 +35,27 @@ export async function POST(request: Request) {
       provider: 'novac',
       status: 'pending',
       related_payload: {
+        order_type: 'wallet_deposit',
         depositAmountNaira: amt,
       },
     });
+
+    // Fallback: If DB constraint temutask_payment_orders_order_type_check is restricted to ('task_creation', 'pro_membership')
+    if (orderError && (orderError.message.includes('check constraint') || orderError.message.includes('order_type'))) {
+      const fallback = await adminSupabase.from('temutask_payment_orders').insert({
+        user_id: user.id,
+        order_type: 'task_creation',
+        amount_kobo: amountKobo.toString(),
+        reference,
+        provider: 'novac',
+        status: 'pending',
+        related_payload: {
+          order_type: 'wallet_deposit',
+          depositAmountNaira: amt,
+        },
+      });
+      orderError = fallback.error;
+    }
 
     if (orderError) {
       return NextResponse.json({ error: orderError.message }, { status: 500 });

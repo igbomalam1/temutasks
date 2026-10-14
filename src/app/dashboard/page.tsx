@@ -276,13 +276,13 @@ export default function DashboardPage() {
 
             {/* Quick Financial Actions */}
             <div className="flex flex-wrap items-center gap-3">
-              <Link href="/wallet/airtime">
+              <Link href="/wallet/deposit">
                 <Button
                   variant="primary"
                   className="bg-[#F95700] hover:bg-[#E04E00] text-white border-none"
-                  leftIcon={<Smartphone className="w-4 h-4" />}
+                  leftIcon={<ArrowDownLeft className="w-4 h-4" />}
                 >
-                  Buy Airtime
+                  Add Funds
                 </Button>
               </Link>
               <Link href="/wallet/cashout">
@@ -322,14 +322,14 @@ export default function DashboardPage() {
             </span>
           </Link>
 
-          {/* Row 1, Button 3: Deposit (Novac Wallet Top-Up) */}
+          {/* Row 1, Button 3: Buy Airtime (VTU) */}
           <Link
-            href="/wallet/deposit"
+            href="/wallet/airtime"
             className="flex flex-col items-center justify-center py-3.5 px-2 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
-            <ArrowDownLeft className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
+            <Smartphone className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
             <span className="text-xs sm:text-sm font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
-              Deposit
+              Buy Airtime
             </span>
           </Link>
 

@@ -28,12 +28,19 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${appUrl}/dashboard?error=Payment+order+not+found`);
   }
 
+  const payload = order.related_payload || {};
+  const effectiveType = payload.order_type || payload.orderType || type || order.order_type;
+
   // Idempotency: If already successful, redirect directly
   if (order.status === 'successful') {
-    if (order.order_type === 'task_creation') {
+    if (effectiveType === 'task_creation') {
       return NextResponse.redirect(`${appUrl}/my-tasks?msg=Task+already+published`);
-    } else {
+    } else if (effectiveType === 'pro_membership') {
       return NextResponse.redirect(`${appUrl}/dashboard?msg=Pro+membership+already+active`);
+    } else if (effectiveType === 'wallet_deposit') {
+      return NextResponse.redirect(`${appUrl}/wallet?msg=Deposit+already+credited`);
+    } else if (effectiveType === 'task_reward_topup') {
+      return NextResponse.redirect(`${appUrl}/my-tasks?msg=Task+reward+already+updated`);
     }
   }
 
@@ -57,9 +64,7 @@ export async function GET(request: Request) {
     .update({ status: 'successful', verified_at: new Date().toISOString() })
     .eq('reference', reference);
 
-  const payload = order.related_payload;
-
-  if (order.order_type === 'task_creation') {
+  if (effectiveType === 'task_creation') {
     // Publish task(s) - supports both single and combined tasks
     const isCombined = payload.isCombined && Array.isArray(payload.tasks);
     const instructions = payload.instructions || '';
@@ -157,7 +162,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(`${appUrl}/my-tasks?msg=Task+published+successfully`);
-  } else if (order.order_type === 'pro_membership') {
+  } else if (effectiveType === 'pro_membership') {
     // Activate Pro membership
     const startsAt = new Date();
     const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
@@ -214,7 +219,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(`${appUrl}/dashboard?msg=Upgraded+to+TemuTasks+Pro`);
-  } else if (order.order_type === 'wallet_deposit') {
+  } else if (effectiveType === 'wallet_deposit') {
     const amountKobo = BigInt(order.amount_kobo);
     const amountNaira = Number(amountKobo) / 100;
 
@@ -261,7 +266,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(`${appUrl}/wallet?msg=Deposit+of+₦${amountNaira.toLocaleString()}+successful`);
-  } else if (order.order_type === 'task_reward_topup') {
+  } else if (effectiveType === 'task_reward_topup') {
     const { taskId, newRewardKobo, newCommKobo, newBaseCostKobo, newTotalCostKobo, newPrice, topupNaira } = payload;
 
     await supabase

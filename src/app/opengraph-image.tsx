@@ -188,7 +188,7 @@ export default async function Image() {
                 boxShadow: '0 6px 16px rgba(249, 87, 0, 0.3)',
               }}
             >
-              📱 Buy Airtime (VTU)
+              💳 Add Funds
             </div>
 
             <div
@@ -205,7 +205,7 @@ export default async function Image() {
                 fontWeight: '700',
               }}
             >
-              💸 Instant Cashout (Bank)
+              💸 Cash Out
             </div>
           </div>
         </div>

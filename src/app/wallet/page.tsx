@@ -90,9 +90,14 @@ export default function WalletPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link href="/wallet/deposit">
+              <Button size="sm" variant="primary" leftIcon={<ArrowDownLeft className="w-4 h-4" />}>
+                Add Funds
+              </Button>
+            </Link>
             <Link href="/wallet/airtime">
-              <Button size="sm" variant="primary" leftIcon={<Smartphone className="w-4 h-4" />}>
+              <Button size="sm" variant="outline" leftIcon={<Smartphone className="w-4 h-4" />}>
                 Buy Airtime
               </Button>
             </Link>

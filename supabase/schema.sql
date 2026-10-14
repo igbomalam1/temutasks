@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS public.temutask_submissions (
 CREATE TABLE IF NOT EXISTS public.temutask_payment_orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.temutask_profiles(id) ON DELETE CASCADE,
-    order_type TEXT NOT NULL CHECK (order_type IN ('task_creation', 'pro_membership')),
+    order_type TEXT NOT NULL CHECK (order_type IN ('task_creation', 'pro_membership', 'wallet_deposit', 'task_reward_topup')),
     amount_kobo BIGINT NOT NULL,
     reference TEXT NOT NULL UNIQUE,
     provider TEXT NOT NULL DEFAULT 'novac',

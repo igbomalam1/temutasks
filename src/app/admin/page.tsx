@@ -975,7 +975,9 @@ export default function AdminDashboardPage() {
                           <td className="p-3 font-semibold text-[#111827]">
                             {p.temutask_profiles?.email}
                           </td>
-                          <td className="p-3 capitalize">{p.order_type?.replace('_', ' ')}</td>
+                          <td className="p-3 capitalize">
+                            {(p.related_payload?.order_type || p.order_type)?.replace('_', ' ')}
+                          </td>
                           <td className="p-3 font-mono font-bold text-[#F95700]">{p.reference}</td>
                           <td className="p-3 font-bold text-[#111827]">
                             {formatNaira(BigInt(p.amount_kobo || 0))}

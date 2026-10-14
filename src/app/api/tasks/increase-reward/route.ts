@@ -168,7 +168,7 @@ export async function POST(request: Request) {
     // OPTION B: NOVAC CHECKOUT
     const redirectUrl = `${appUrl}/api/payments/novac/callback?ref=${reference}&type=task_reward_topup`;
 
-    const { error: orderError } = await adminSupabase.from('temutask_payment_orders').insert({
+    let { error: orderError } = await adminSupabase.from('temutask_payment_orders').insert({
       user_id: user.id,
       order_type: 'task_reward_topup',
       amount_kobo: topupKobo.toString(),
@@ -176,6 +176,7 @@ export async function POST(request: Request) {
       provider: 'novac',
       status: 'pending',
       related_payload: {
+        order_type: 'task_reward_topup',
         taskId,
         newPrice: priceNaira,
         newRewardKobo: newRewardKobo.toString(),
@@ -187,6 +188,31 @@ export async function POST(request: Request) {
         topupNaira,
       },
     });
+
+    // Fallback if check constraint doesn't have 'task_reward_topup' yet
+    if (orderError && (orderError.message.includes('check constraint') || orderError.message.includes('order_type'))) {
+      const fallback = await adminSupabase.from('temutask_payment_orders').insert({
+        user_id: user.id,
+        order_type: 'task_creation',
+        amount_kobo: topupKobo.toString(),
+        reference,
+        provider: 'novac',
+        status: 'pending',
+        related_payload: {
+          order_type: 'task_reward_topup',
+          taskId,
+          newPrice: priceNaira,
+          newRewardKobo: newRewardKobo.toString(),
+          newCommKobo: newCommKobo.toString(),
+          newBaseCostKobo: newBaseCostKobo.toString(),
+          newTotalCostKobo: newTotalCostKobo.toString(),
+          remainingSlots,
+          priceDiffNaira,
+          topupNaira,
+        },
+      });
+      orderError = fallback.error;
+    }
 
     if (orderError) {
       return NextResponse.json({ error: orderError.message }, { status: 400 });
