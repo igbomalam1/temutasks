@@ -91,7 +91,7 @@ export default function DashboardPage() {
       : '';
 
   const getInviteMessage = () =>
-    `You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
+    `You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
 
   const copyReferralLink = async () => {
     if (!referralUrl) return;
@@ -193,10 +193,8 @@ export default function DashboardPage() {
             href="/tasks/create"
             className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#FFF5F0] group-hover:bg-[#F95700] text-[#F95700] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
-              <PlusCircle className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <PlusCircle className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
+            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Create Tasks
             </span>
           </Link>
@@ -206,10 +204,8 @@ export default function DashboardPage() {
             href="/tasks"
             className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] group-hover:bg-[#0090FE] text-[#0090FE] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <Sparkles className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
+            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Earn Rewards
             </span>
           </Link>
@@ -224,10 +220,8 @@ export default function DashboardPage() {
                 {activeTasksCount}
               </span>
             )}
-            <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] group-hover:bg-[#10B981] text-[#10B981] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
-              <ListTodo className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <ListTodo className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
+            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Tasks
             </span>
           </Link>
@@ -242,10 +236,8 @@ export default function DashboardPage() {
                 {pendingReviewsCount}
               </span>
             )}
-            <div className="w-10 h-10 rounded-xl bg-[#FFFBEB] group-hover:bg-[#F59E0B] text-[#F59E0B] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
-              <Clock className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <Clock className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
+            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Review
             </span>
           </Link>
@@ -255,10 +247,8 @@ export default function DashboardPage() {
             href="/referrals"
             className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#F5F3FF] group-hover:bg-[#8B5CF6] text-[#8B5CF6] group-hover:text-white flex items-center justify-center mb-1.5 transition-colors">
-              <Users className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] sm:text-xs font-bold text-[#111827] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <Users className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
+            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Referrals
             </span>
           </Link>
@@ -313,7 +303,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-[#F95700]/15 text-[11px] text-[#6B7280] italic">
-            &ldquo;You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
+            &ldquo;You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
           </div>
         </Card>
 

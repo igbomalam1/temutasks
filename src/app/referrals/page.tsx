@@ -67,7 +67,7 @@ export default function ReferralsPage() {
       : '';
 
   const getInviteMessage = () =>
-    `You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
+    `You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
 
   const copyReferralLink = async () => {
     if (!referralUrl) return;
@@ -175,7 +175,7 @@ export default function ReferralsPage() {
             </div>
           </div>
           <div className="mt-2 pt-3 border-t border-[#F95700]/15 text-xs text-[#6B7280] italic">
-            &ldquo;You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
+            &ldquo;You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
           </div>
         </Card>
 
