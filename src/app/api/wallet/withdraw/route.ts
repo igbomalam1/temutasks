@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       <strong>Reference:</strong> ${reference}</p>
       <p>Our finance team processes payouts quickly. You will be notified once transfer is completed.</p>`,
       ctaText: 'View Wallet',
-      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.com'}/wallet`,
+      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
     });
 
     sendEmail({

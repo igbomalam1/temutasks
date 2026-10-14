@@ -161,7 +161,7 @@ export async function POST(request: Request) {
           <strong>Temu Email:</strong> ${temuEmail.trim()}</p>
           <p>Please log in to your TemuTasks dashboard to review and approve the submission.</p>`,
           ctaText: 'Review Submission',
-          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.com'}/my-tasks`,
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/my-tasks`,
         });
 
         sendEmail({

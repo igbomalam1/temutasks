@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const reference = url.searchParams.get('ref') || url.searchParams.get('transactionReference') || url.searchParams.get('trxref');
   const type = url.searchParams.get('type') || 'task_creation';
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top';
 
   if (!reference) {
     return NextResponse.redirect(`${appUrl}/dashboard?error=Missing+payment+reference`);

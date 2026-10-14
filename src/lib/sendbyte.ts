@@ -14,7 +14,7 @@ export interface SendEmailResponse {
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResponse> {
   const apiKey = process.env.SENDBYTE_API_KEY;
-  const fromEmail = process.env.SENDBYTE_FROM_EMAIL || 'notifications@sendbyte.africa';
+  const fromEmail = process.env.SENDBYTE_FROM_EMAIL || 'dev@temutasks.top';
   const fromName = process.env.SENDBYTE_FROM_NAME || 'TemuTasks';
 
   if (!apiKey) {

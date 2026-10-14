@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const totalNaira = Number(totalKobo) / 100;
 
     const reference = generateRef('TASK-PAY');
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top';
     const redirectUrl = `${appUrl}/api/payments/novac/callback?ref=${reference}&type=task_creation`;
 
     // 1. Record pending payment order

@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     // 2. Pay with Novac
     if (paymentMethod === 'novac') {
       const reference = generateRef('PRO-NVC');
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top';
       const redirectUrl = `${appUrl}/api/payments/novac/callback?ref=${reference}&type=pro_membership`;
 
       // Record pending order

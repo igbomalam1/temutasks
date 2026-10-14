@@ -163,7 +163,7 @@ export async function POST(request: Request) {
 
       const participantEmail = sub.temutask_profiles?.email;
       if (participantEmail) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top';
         const emailHtml = renderEmailTemplate({
           title: 'Task Approved & Reward Credited! 💵',
           contentHtml: `<p>Congratulations! Your Temu task submission has been approved:</p>
