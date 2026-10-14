@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="12" fill="#111827"/>
+  <!-- Stylized energetic T symbol with Orange Accent -->
+  <path d="M10 14C10 12.3431 11.3431 11 13 11H35C36.6569 11 38 12.3431 38 14C38 15.6569 36.6569 17 35 17H27V34C27 35.6569 25.6569 37 24 37C22.3431 37 21 35.6569 21 34V17H13C11.3431 17 10 15.6569 10 14Z" fill="#FFFFFF"/>
+  <!-- Highlighting task sparkle in brand orange -->
+  <path d="M34 23L36.2 27.8L41 30L36.2 32.2L34 37L31.8 32.2L27 30L31.8 27.8L34 23Z" fill="#F95700"/>
+  <!-- Dot / Accent circle -->
+  <circle cx="16" cy="30" r="3" fill="#F95700"/>
+</svg>
