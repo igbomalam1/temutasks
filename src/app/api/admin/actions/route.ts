@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
 export async function POST(request: Request) {
   try {
@@ -42,6 +43,13 @@ export async function POST(request: Request) {
 
     // 1. ACTION: CREDIT USER WALLET
     if (action === 'credit_wallet') {
+      // SECURITY: Only primary superadmin ibngahd01@gmail.com is authorized to manually credit wallets
+      if (user.email?.toLowerCase() !== 'ibngahd01@gmail.com') {
+        return NextResponse.json({
+          error: 'Security Restriction: Only the primary superadmin (ibngahd01@gmail.com) is authorized to credit user wallets.'
+        }, { status: 403 });
+      }
+
       const amt = Number(amountNaira);
       if (!amt || amt <= 0) {
         return NextResponse.json({ error: 'Please enter a valid credit amount in Naira' }, { status: 400 });
@@ -91,6 +99,29 @@ export async function POST(request: Request) {
         type: 'wallet_credit',
         link: '/wallet',
       });
+
+      // Email the credited user
+      if (targetUser.email) {
+        const userEmailHtml = renderEmailTemplate({
+          title: 'Your Wallet Has Been Credited 💰',
+          contentHtml: `<p>Hello ${targetUser.full_name || 'User'},</p>
+          <p>Your TemuTasks wallet has been credited:</p>
+          <p><strong>Amount Credited:</strong> ₦${amt.toLocaleString()}.00<br>
+          <strong>Reason / Note:</strong> ${reason?.trim() || 'Admin adjustment'}<br>
+          <strong>Reference:</strong> ${ref}<br>
+          <strong>New Available Balance:</strong> ₦${(Number(newBalance) / 100).toLocaleString()}.00</p>
+          <p>You can use your balance to buy airtime or request cash out anytime.</p>`,
+          ctaText: 'Open Wallet',
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
+        });
+
+        sendEmail({
+          to: targetUser.email,
+          subject: `[TemuTasks] Wallet Credited: ₦${amt.toLocaleString()}`,
+          html: userEmailHtml,
+          eventType: 'admin_credit_recipient',
+        }).catch((e) => console.error('Error emailing credited user:', e));
+      }
 
       // Audit log
       await adminSupabase.from('temutask_admin_audit_logs').insert({
@@ -155,6 +186,33 @@ export async function POST(request: Request) {
         link: '/pro',
       });
 
+      // Email the upgraded user
+      if (targetUser.email) {
+        const proEmailHtml = renderEmailTemplate({
+          title: 'Welcome to TemuTasks Pro! ⭐',
+          contentHtml: `<p>Hello ${targetUser.full_name || 'User'},</p>
+          <p>Great news! Your account has been upgraded to <strong>TemuTasks Pro</strong> for ${durationDays} days.</p>
+          <p><strong>Expiry Date:</strong> ${expiresAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}<br>
+          <strong>Reference:</strong> ${ref}</p>
+          <p><strong>Pro Privileges Unlocked:</strong></p>
+          <ul>
+            <li><strong>Batch Task Submissions:</strong> Pro users can submit multiple tasks at once and earn for all</li>
+            <li><strong>Instant Task Alerts:</strong> Receive real-time email notifications when new tasks are published</li>
+            <li><strong>Priority Clearance:</strong> Fastest approval during nightly clearance rounds</li>
+            <li><strong>Pro Verified Badge</strong> on your profile and dashboard</li>
+          </ul>`,
+          ctaText: 'Open Pro Dashboard',
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/dashboard`,
+        });
+
+        sendEmail({
+          to: targetUser.email,
+          subject: `[TemuTasks Pro] Your Account Has Been Upgraded! ⭐`,
+          html: proEmailHtml,
+          eventType: 'pro_upgrade_confirmation',
+        }).catch((e) => console.error('Error emailing upgraded pro user:', e));
+      }
+
       // Audit log
       await adminSupabase.from('temutask_admin_audit_logs').insert({
         admin_id: user.id,
@@ -193,6 +251,79 @@ export async function POST(request: Request) {
         success: true,
         message: `Changed ${targetUser.email} tier to Basic.`,
       });
+    }
+
+    // 4. ACTION: PAY WITHDRAWAL
+    if (action === 'pay_withdrawal') {
+      const { withdrawalId } = body;
+      if (!withdrawalId) {
+        return NextResponse.json({ error: 'Withdrawal ID required' }, { status: 400 });
+      }
+
+      const { data: wth } = await adminSupabase
+        .from('temutask_withdrawals')
+        .select('*, temutask_profiles!user_id(email, full_name)')
+        .eq('id', withdrawalId)
+        .maybeSingle();
+
+      if (!wth) {
+        return NextResponse.json({ error: 'Withdrawal request not found' }, { status: 404 });
+      }
+
+      await adminSupabase
+        .from('temutask_withdrawals')
+        .update({
+          status: 'paid',
+          processed_by: user.id,
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', withdrawalId);
+
+      const amtNaira = (Number(wth.amount_kobo) / 100).toLocaleString();
+
+      // In-app notification
+      await adminSupabase.from('temutask_notifications').insert({
+        user_id: wth.user_id,
+        title: 'Cash Out Paid! 💸',
+        message: `Your withdrawal of ₦${amtNaira} to ${wth.payment_destination?.toUpperCase()} (${wth.account_number}) has been completed. Ref: ${wth.reference}.`,
+        type: 'withdrawal_paid',
+        link: '/wallet',
+      });
+
+      // Email receipt to user
+      const recipientEmail = wth.temutask_profiles?.email;
+      if (recipientEmail) {
+        const payoutHtml = renderEmailTemplate({
+          title: 'Your Cash Out Has Been Paid! 💸',
+          contentHtml: `<p>Hello ${wth.temutask_profiles?.full_name || 'User'},</p>
+          <p>Your withdrawal request has been successfully processed and paid out:</p>
+          <p><strong>Amount:</strong> ₦${amtNaira}.00<br>
+          <strong>Destination:</strong> ${wth.payment_destination?.toUpperCase()}<br>
+          <strong>Account Number:</strong> ${wth.account_number}<br>
+          <strong>Account Name:</strong> ${wth.account_name}<br>
+          <strong>Reference:</strong> ${wth.reference}</p>
+          <p>The funds should reflect in your account shortly.</p>`,
+          ctaText: 'View Wallet',
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
+        });
+
+        sendEmail({
+          to: recipientEmail,
+          subject: `[TemuTasks] Withdrawal Paid: ₦${amtNaira}`,
+          html: payoutHtml,
+          eventType: 'withdrawal_completed',
+        }).catch((e) => console.error('Error emailing withdrawal payout:', e));
+      }
+
+      await adminSupabase.from('temutask_admin_audit_logs').insert({
+        admin_id: user.id,
+        action: 'pay_withdrawal',
+        target_type: 'withdrawal',
+        target_id: withdrawalId,
+        details: { amount_kobo: wth.amount_kobo, reference: wth.reference },
+      });
+
+      return NextResponse.json({ success: true, message: `Withdrawal of ₦${amtNaira} marked as paid!` });
     }
 
     return NextResponse.json({ error: 'Invalid admin action' }, { status: 400 });

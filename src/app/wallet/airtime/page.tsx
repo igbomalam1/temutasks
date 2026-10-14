@@ -16,7 +16,7 @@ export default function AirtimePage() {
 
   const [network, setNetwork] = useState<'MTN' | 'AIRTEL' | 'GLO' | '9MOBILE'>('MTN');
   const [phone, setPhone] = useState('');
-  const [amount, setAmount] = useState<number>(100);
+  const [amount, setAmount] = useState<number>(50);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -156,8 +156,8 @@ export default function AirtimePage() {
             />
 
             <Input
-              label="Recharge Amount (₦)"
-              placeholder="100"
+              label="Recharge Amount (₦, Min ₦50)"
+              placeholder="50"
               type="number"
               min="50"
               max="50000"
@@ -168,7 +168,7 @@ export default function AirtimePage() {
 
             {/* Quick denomination buttons */}
             <div className="flex flex-wrap gap-2 pt-1">
-              {[100, 200, 500, 1000, 2000].map((amt) => (
+              {[50, 100, 200, 500, 1000, 2000].map((amt) => (
                 <button
                   key={amt}
                   type="button"

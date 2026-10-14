@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -106,6 +107,36 @@ export async function GET(request: Request) {
           type: 'welcome',
           link: '/dashboard',
         });
+
+        // Send welcome email
+        if (user.email) {
+          const welcomeHtml = renderEmailTemplate({
+            title: 'Welcome to TemuTasks! 🚀',
+            contentHtml: `<p>Hello ${fullName},</p>
+            <p>Welcome to <strong>TemuTasks</strong> — Nigeria's premier Temu participant rewards and task fulfillment platform.</p>
+            <p><strong>Your Account Details:</strong></p>
+            <ul>
+              <li><strong>Email:</strong> ${user.email}</li>
+              <li><strong>Referral Code:</strong> <strong style="color: #F95700;">${uniqueCode}</strong></li>
+              <li><strong>Referral Link:</strong> ${origin}/login?ref=${uniqueCode}</li>
+            </ul>
+            <p><strong>How to Get Started:</strong></p>
+            <ol>
+              <li><strong>Browse Available Tasks:</strong> Complete simple Temu invitation clicks and earn cash rewards directly to your wallet.</li>
+              <li><strong>Invite Friends:</strong> Earn ₦10 or ₦50 lifetime commission every time your friends complete tasks.</li>
+              <li><strong>Create Tasks:</strong> Need Temu clicks or new users for your own games? Launch a funded task in seconds!</li>
+            </ol>`,
+            ctaText: 'Go to Dashboard',
+            ctaUrl: `${origin}/dashboard`,
+          });
+
+          sendEmail({
+            to: user.email,
+            subject: 'Welcome to TemuTasks! 🚀 Get Started & Earn Rewards',
+            html: welcomeHtml,
+            eventType: 'user_welcome',
+          }).catch((e) => console.error('Error sending welcome email:', e));
+        }
       }
     }
   }

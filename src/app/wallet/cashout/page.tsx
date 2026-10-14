@@ -17,7 +17,7 @@ export default function CashOutPage() {
   const [destination, setDestination] = useState<'opay' | 'palmpay' | 'moniepoint'>('opay');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
-  const [amount, setAmount] = useState<number>(500);
+  const [amount, setAmount] = useState<number>(1000);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -52,8 +52,8 @@ export default function CashOutPage() {
       return;
     }
 
-    if (!amount || amount < 500) {
-      setErrorMsg('Minimum cash out amount is ₦500.00.');
+    if (!amount || amount < 1000) {
+      setErrorMsg('Minimum cash out amount is ₦1,000.00.');
       return;
     }
 
@@ -174,9 +174,9 @@ export default function CashOutPage() {
             />
 
             <Input
-              label="Withdrawal Amount (₦, Min ₦500)"
+              label="Withdrawal Amount (₦, Min ₦1,000)"
               type="number"
-              min="500"
+              min="1000"
               value={amount.toString()}
               onChange={(e) => setAmount(parseInt(e.target.value, 10) || 0)}
               required

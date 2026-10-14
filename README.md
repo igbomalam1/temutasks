@@ -64,7 +64,7 @@ TemuTasks is a high-performance web platform built with **Next.js 14 (App Router
    - Renewable via wallet balance or Novac.
    - Recurring renewal adds 14 days to the current unexpired date without penalty.
 3. **Withdrawals**:
-   - Minimum: ₦500.00.
+   - Minimum: ₦1,000.00.
    - Destinations: OPay, PalmPay, Moniepoint.
    - Funds are atomically reserved in `temutask_wallets` and `temutask_wallet_ledger` upon request.
 4. **Nightly Automated Admin Review**:

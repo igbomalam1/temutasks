@@ -147,6 +147,39 @@ export async function GET(request: Request) {
       status: 'active',
     });
 
+    // Enable task alerts
+    await supabase.from('temutask_notification_preferences').upsert({
+      user_id: order.user_id,
+      email_task_alerts: true,
+    });
+
+    const userEmail = order.temutask_profiles?.email;
+    if (userEmail) {
+      const proEmailHtml = renderEmailTemplate({
+        title: 'Welcome to TemuTasks Pro! ⭐',
+        contentHtml: `<p>Congratulations! Your payment for <strong>TemuTasks Pro</strong> (14 Days) was received successfully.</p>
+        <p><strong>Expiry Date:</strong> ${expiresAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}<br>
+        <strong>Payment Gateway:</strong> Novac<br>
+        <strong>Reference:</strong> ${reference}</p>
+        <p><strong>Pro Privileges Unlocked:</strong></p>
+        <ul>
+          <li><strong>Batch Submissions:</strong> Pro users can submit multiple tasks at once and earn for all</li>
+          <li><strong>Instant Task Alerts:</strong> Receive immediate email notifications whenever tasks are posted</li>
+          <li><strong>Priority Clearance:</strong> Fastest approval during nightly clearance rounds</li>
+          <li><strong>Pro Verified Badge</strong> on your profile and dashboard</li>
+        </ul>`,
+        ctaText: 'Access Dashboard',
+        ctaUrl: `${appUrl}/dashboard`,
+      });
+
+      sendEmail({
+        to: userEmail,
+        subject: `[TemuTasks Pro] Welcome to Pro Membership! ⭐`,
+        html: proEmailHtml,
+        eventType: 'pro_upgrade_novac',
+      }).catch((e) => console.error('Error sending pro email via novac callback:', e));
+    }
+
     return NextResponse.redirect(`${appUrl}/dashboard?msg=Upgraded+to+TemuTasks+Pro`);
   }
 

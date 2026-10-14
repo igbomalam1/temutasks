@@ -257,16 +257,22 @@ export default function AdminDashboardPage() {
 
   const handleMarkWithdrawalPaid = async (withdrawalId: string) => {
     try {
-      await supabase
-        .from('temutask_withdrawals')
-        .update({
-          status: 'paid',
-          processed_by: user?.id,
-          processed_at: new Date().toISOString(),
-        })
-        .eq('id', withdrawalId);
+      const res = await fetch('/api/admin/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pay_withdrawal',
+          withdrawalId,
+          userId: user?.id,
+        }),
+      });
 
-      setMsg({ text: 'Withdrawal marked as PAID successfully!', type: 'success' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to mark withdrawal as paid');
+      }
+
+      setMsg({ text: data.message || 'Withdrawal marked as PAID & receipt emailed!', type: 'success' });
       await loadTabContent();
     } catch (err: any) {
       setMsg({ text: err.message, type: 'error' });

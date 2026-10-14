@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Logo } from '@/components/ui/Logo';
 import { TestimonyCollage } from '@/components/landing/TestimonyCollage';
+import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   Zap,
@@ -18,6 +19,13 @@ import {
 
 export default function LandingPage() {
   const { user, signInWithGoogle, isLoading } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (user && !isLoading) {
+      router.replace('/dashboard');
+    }
+  }, [user, isLoading, router]);
 
   return (
     <div className="min-h-screen bg-[#F7F7F8] flex flex-col">

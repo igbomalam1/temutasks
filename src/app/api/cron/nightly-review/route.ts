@@ -128,6 +128,27 @@ export async function POST(request: Request) {
           link: '/wallet',
         });
 
+        // 6. Send approval email to participant
+        const participantEmail = sub.temutask_profiles?.email;
+        if (participantEmail) {
+          const emailHtml = renderEmailTemplate({
+            title: 'Task Approved! (Nightly Review Clearance) 🎉',
+            contentHtml: `<p>Good news! Your submission for <strong>${task.title}</strong> was automatically cleared by nightly admin review.</p>
+            <p><strong>Reward Credited:</strong> ₦${(Number(rewardKobo) / 100).toFixed(2)}<br>
+            <strong>Reference:</strong> ${rewardResult.reference}</p>
+            <p>Your wallet has been credited and is available for instant airtime or withdrawal.</p>`,
+            ctaText: 'View Wallet Balance',
+            ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
+          });
+
+          sendEmail({
+            to: participantEmail,
+            subject: `[TemuTasks] Task Approved! ₦${(Number(rewardKobo) / 100).toFixed(2)} Credited`,
+            html: emailHtml,
+            eventType: 'nightly_auto_approval',
+          }).catch((e) => console.error('Nightly review email error:', e));
+        }
+
         approvedCount++;
       } catch (err: any) {
         errors.push({ subId: sub.id, error: err.message });

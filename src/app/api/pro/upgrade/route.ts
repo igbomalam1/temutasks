@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { executeWalletTransaction } from '@/lib/wallet';
 import { initiateNovacPayment } from '@/lib/novac';
 import { generateRef } from '@/lib/utils';
+import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
 export async function POST(request: Request) {
   try {
@@ -82,6 +83,33 @@ export async function POST(request: Request) {
         expires_at: newExpiresAt.toISOString(),
         status: 'active',
       });
+
+      // Send confirmation email
+      if (user.email) {
+        const proEmailHtml = renderEmailTemplate({
+          title: 'Welcome to TemuTasks Pro! ⭐',
+          contentHtml: `<p>Congratulations! Your upgrade to <strong>TemuTasks Pro</strong> (14 Days) was successful.</p>
+          <p><strong>Expiry Date:</strong> ${newExpiresAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}<br>
+          <strong>Cost:</strong> ₦${proCostNaira}.00 (debited from wallet)<br>
+          <strong>Reference:</strong> ${reference}</p>
+          <p><strong>Pro Privileges Unlocked:</strong></p>
+          <ul>
+            <li><strong>Batch Submissions:</strong> Pro users can submit multiple tasks at once and earn for all</li>
+            <li><strong>Real-Time Task Alerts:</strong> Receive immediate email notifications whenever tasks are posted</li>
+            <li><strong>Fast-Track Review:</strong> Priority clearance during nightly reviews</li>
+            <li><strong>Pro Verified Badge</strong> on your profile and dashboard</li>
+          </ul>`,
+          ctaText: 'View Dashboard',
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/dashboard`,
+        });
+
+        sendEmail({
+          to: user.email,
+          subject: `[TemuTasks Pro] Welcome to Pro Membership! ⭐`,
+          html: proEmailHtml,
+          eventType: 'pro_upgrade_wallet',
+        }).catch((e) => console.error('Error sending pro confirmation email:', e));
+      }
 
       return NextResponse.json({ success: true, expiresAt: newExpiresAt.toISOString() });
     }

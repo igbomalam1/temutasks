@@ -22,6 +22,10 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailRespo
     return { success: false, error: 'SENDBYTE_API_KEY not configured' };
   }
 
+  let success = false;
+  let messageId = '';
+  let errorMsg = '';
+
   try {
     const res = await fetch('https://api.sendbyte.africa/v1/emails', {
       method: 'POST',
@@ -41,20 +45,44 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailRespo
     const data = await res.json().catch(() => null);
 
     if (!res.ok) {
-      const errMsg = data?.message || data?.error || `HTTP ${res.status}`;
-      return { success: false, error: errMsg };
+      errorMsg =
+        data?.error?.message ||
+        data?.message ||
+        (typeof data?.error === 'string' ? data.error : null) ||
+        JSON.stringify(data) ||
+        `HTTP ${res.status}`;
+      console.error(`[Sendbyte Error] Failed to send email to ${params.to} (${params.eventType}):`, errorMsg);
+    } else {
+      success = true;
+      messageId = data?.id || data?.messageId || 'sent';
+      console.log(`[Sendbyte Success] Email delivered to ${params.to} (${params.eventType}), ID: ${messageId}`);
     }
-
-    return {
-      success: true,
-      messageId: data?.id || data?.messageId || 'sent',
-    };
   } catch (err: any) {
-    return {
-      success: false,
-      error: err.message || 'Connection error to Sendbyte',
-    };
+    errorMsg = err.message || 'Connection error to Sendbyte';
+    console.error(`[Sendbyte Network Error] (${params.eventType}):`, errorMsg);
   }
+
+  // Attempt to record in temutask_email_logs
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/server');
+    const adminSupabase = createAdminClient();
+    await adminSupabase.from('temutask_email_logs').insert({
+      recipient_email: params.to,
+      subject: params.subject,
+      event_type: params.eventType,
+      status: success ? 'sent' : 'failed',
+      provider_id: messageId || null,
+      error_message: errorMsg || null,
+    });
+  } catch (logErr) {
+    // Non-blocking log catch
+  }
+
+  return {
+    success,
+    messageId: messageId || undefined,
+    error: errorMsg || undefined,
+  };
 }
 
 // Branded email layout builder

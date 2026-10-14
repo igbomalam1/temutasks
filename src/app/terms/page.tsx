@@ -53,7 +53,7 @@ export default function TermsPage() {
             <h2 className="text-sm font-bold text-[#111827]">5. Wallets, Airtime & Withdrawals</h2>
             <p>
               All balances are maintained on an append-only financial ledger. Airtime top-ups are fulfilled
-              via SmartAPI. Withdrawals are processed to OPay, PalmPay, and Moniepoint with a ₦500 minimum.
+              via SmartAPI. Withdrawals are processed to OPay, PalmPay, and Moniepoint with a ₦1,000 minimum.
             </p>
           </div>
         </Card>

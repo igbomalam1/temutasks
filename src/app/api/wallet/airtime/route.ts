@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { purchaseAirtime } from '@/lib/smartapi';
 import { executeWalletTransaction } from '@/lib/wallet';
 import { generateRef } from '@/lib/utils';
+import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
 export async function POST(request: Request) {
   try {
@@ -85,6 +86,39 @@ export async function POST(request: Request) {
       return NextResponse.json({
         error: `Recharge failed: ${airtimeResult.message}. Your wallet balance has been refunded.`,
       }, { status: 502 });
+    }
+
+    // 5. If successful, send in-app notification and email receipt
+    if (airtimeResult.success || airtimeResult.code === 400) {
+      await adminSupabase.from('temutask_notifications').insert({
+        user_id: user.id,
+        title: 'Airtime Recharge Successful 📱',
+        message: `₦${amt.toLocaleString()} airtime to ${phone} (${network}) has been processed. Reference: ${reference}.`,
+        type: 'airtime_purchase',
+        link: '/wallet',
+      });
+
+      if (user.email) {
+        const emailHtml = renderEmailTemplate({
+          title: 'Airtime Purchase Successful 📱',
+          contentHtml: `<p>Your airtime recharge has been processed successfully:</p>
+          <p><strong>Network:</strong> ${network}<br>
+          <strong>Phone:</strong> ${phone}<br>
+          <strong>Amount:</strong> ₦${amt.toLocaleString()}.00<br>
+          <strong>Reference:</strong> ${reference}<br>
+          <strong>Status:</strong> ${airtimeResult.status.toUpperCase()}</p>
+          <p>The airtime will reflect on the destination number immediately.</p>`,
+          ctaText: 'View Wallet Balance',
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
+        });
+
+        sendEmail({
+          to: user.email,
+          subject: `[TemuTasks] Airtime Purchase Receipt: ₦${amt} (${network})`,
+          html: emailHtml,
+          eventType: 'airtime_receipt',
+        }).catch((e) => console.error('Sendbyte airtime receipt error:', e));
+      }
     }
 
     return NextResponse.json({

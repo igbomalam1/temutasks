@@ -105,6 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentUser);
         if (currentUser) {
           await fetchUserData(currentUser.id);
+
+          // If user landed on home (/) or /login right after OAuth sign-in, seamlessly route them into /dashboard
+          if (typeof window !== 'undefined') {
+            const path = window.location.pathname;
+            if (path === '/' || path === '/login') {
+              window.location.href = '/dashboard';
+            }
+          }
         } else {
           setProfile(null);
           setWallet(null);
@@ -121,7 +129,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async (redirectPath: string = '/dashboard') => {
     // Check for referral code stored in localStorage
     const savedRef = typeof window !== 'undefined' ? localStorage.getItem('temutask_ref') : null;
-    const callbackUrl = `${window.location.origin}/auth/callback${savedRef ? `?ref=${encodeURIComponent(savedRef)}` : ''}`;
+    const params = new URLSearchParams();
+    if (redirectPath && redirectPath.startsWith('/')) {
+      params.set('next', redirectPath);
+    }
+    if (savedRef) {
+      params.set('ref', savedRef);
+    }
+    const qs = params.toString();
+    const callbackUrl = `${window.location.origin}/auth/callback${qs ? `?${qs}` : ''}`;
 
     await supabase.auth.signInWithOAuth({
       provider: 'google',

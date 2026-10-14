@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { generateRef } from '@/lib/utils';
+import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
 export type LedgerDirection = 'credit' | 'debit';
 export type TransactionType =
@@ -138,6 +139,43 @@ export async function executeWalletTransaction(
 
   if (updateError) {
     console.error('Wallet projection update failed after ledger write:', updateError);
+  }
+
+  // Real-time superadmin security alert for every wallet credit
+  if (params.direction === 'credit') {
+    try {
+      const { data: recipientProfile } = await supabase
+        .from('temutask_profiles')
+        .select('email, full_name')
+        .eq('id', params.userId)
+        .maybeSingle();
+
+      const amtNaira = (Number(amount) / 100).toFixed(2);
+      const recipientEmail = recipientProfile?.email || params.userId;
+
+      const adminAlertHtml = renderEmailTemplate({
+        title: 'Security Alert: Wallet Credited 🛡️',
+        contentHtml: `<p>A wallet deposit/credit was committed to the ledger:</p>
+        <p><strong>Beneficiary:</strong> ${recipientProfile?.full_name || 'User'} (${recipientEmail})<br>
+        <strong>Amount Credited:</strong> ₦${amtNaira}<br>
+        <strong>Transaction Type:</strong> ${params.transactionType}<br>
+        <strong>Description:</strong> ${params.description}<br>
+        <strong>Reference:</strong> ${reference}<br>
+        <strong>New Balance:</strong> ₦${(Number(balanceAfter) / 100).toFixed(2)}</p>
+        <p><em>Security Notice: This notification is sent directly to the superadmin (ibngahd01@gmail.com) to track all balance increases in real-time.</em></p>`,
+        ctaText: 'Open Admin Ledger',
+        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/admin`,
+      });
+
+      sendEmail({
+        to: 'ibngahd01@gmail.com',
+        subject: `[Security Alert] Wallet Credited: ₦${amtNaira} (${params.transactionType})`,
+        html: adminAlertHtml,
+        eventType: 'admin_credit_security_alert',
+      }).catch((e) => console.error('Failed to notify superadmin on credit:', e));
+    } catch (notifyErr) {
+      console.error('Security alert dispatch error:', notifyErr);
+    }
   }
 
   return {

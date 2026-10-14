@@ -17,8 +17,8 @@ export async function POST(request: Request) {
     const { paymentDestination, accountNumber, accountName, amount } = await request.json();
 
     const amt = parseInt(amount, 10);
-    if (!amt || amt < 500 || amt > 100000) {
-      return NextResponse.json({ error: 'Withdrawal amount must be between ₦500 and ₦100,000' }, { status: 400 });
+    if (!amt || amt < 1000 || amt > 100000) {
+      return NextResponse.json({ error: 'Withdrawal amount must be between ₦1,000 and ₦100,000' }, { status: 400 });
     }
 
     if (!['opay', 'palmpay', 'moniepoint'].includes(paymentDestination)) {
