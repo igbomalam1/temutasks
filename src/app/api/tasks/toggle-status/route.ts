@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      newStatus,
+      newStatus: nextStatus,
       message:
         nextStatus === 'paused'
           ? 'Task paused successfully. It will not be shown to participants until resumed.'

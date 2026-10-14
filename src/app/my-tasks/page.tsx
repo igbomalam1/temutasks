@@ -304,9 +304,10 @@ export default function MyTasksPage() {
         throw new Error(`Failed to upload proof image: ${uploadError.message}`);
       }
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('temutask-proofs')
         .getPublicUrl(filePath);
+      const proofUrl = urlData?.publicUrl || '';
 
       // 2. Call review API with structured reason and proofUrl
       const res = await fetch('/api/tasks/review', {

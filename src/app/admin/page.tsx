@@ -615,7 +615,12 @@ export default function AdminDashboardPage() {
                   </thead>
                   <tbody className="divide-y divide-[#E5E7EB]">
                     {filteredItems.map((u) => {
-                      const balanceKobo = BigInt(u.temutask_wallets?.balance_kobo || 0);
+                      const walletObj = Array.isArray(u.temutask_wallets)
+                        ? u.temutask_wallets[0]
+                        : u.temutask_wallets;
+                      const balanceKobo = BigInt(walletObj?.balance_kobo || 0);
+                      const tier = u.tier || 'basic';
+                      const status = u.status || 'active';
                       return (
                         <tr key={u.id} className="hover:bg-[#F9FAFB]">
                           <td className="p-3 font-semibold text-[#111827]">
@@ -629,13 +634,13 @@ export default function AdminDashboardPage() {
                           </td>
                           <td className="p-3 font-mono text-[#6B7280]">{u.referred_by || '—'}</td>
                           <td className="p-3">
-                            <Badge variant={u.tier === 'pro' ? 'premium' : 'secondary'}>
-                              {u.tier.toUpperCase()}
+                            <Badge variant={tier === 'pro' ? 'premium' : 'secondary'}>
+                              {tier.toUpperCase()}
                             </Badge>
                           </td>
                           <td className="p-3">
-                            <Badge variant={u.status === 'active' ? 'success' : 'danger'}>
-                              {u.status.toUpperCase()}
+                            <Badge variant={status === 'active' ? 'success' : 'danger'}>
+                              {status.toUpperCase()}
                             </Badge>
                           </td>
                           <td className="p-3 text-right font-bold text-[#111827]">
@@ -747,7 +752,7 @@ export default function AdminDashboardPage() {
                         </td>
                         <td className="p-3 text-right">
                           <Badge variant={t.status === 'active' ? 'success' : 'secondary'}>
-                            {t.status.toUpperCase()}
+                            {(t.status || 'pending').toUpperCase()}
                           </Badge>
                         </td>
                       </tr>
@@ -822,11 +827,34 @@ export default function AdminDashboardPage() {
                                   : 'warning'
                               }
                             >
-                              {sub.status.toUpperCase()}
+                              {(sub.status || 'pending').toUpperCase()}
                             </Badge>
                           </td>
-                          <td className="p-3 text-[#EF4444] font-medium">
-                            {sub.decline_reason || '—'}
+                          <td className="p-3 text-[#EF4444] font-medium max-w-xs">
+                            {(() => {
+                              if (!sub.decline_reason) return '—';
+                              try {
+                                const parsed = typeof sub.decline_reason === 'string' ? JSON.parse(sub.decline_reason) : sub.decline_reason;
+                                if (parsed && typeof parsed === 'object') {
+                                  return (
+                                    <div className="space-y-1">
+                                      <div>{parsed.reason || 'No reason provided'}</div>
+                                      {parsed.proofUrl && (
+                                        <a
+                                          href={parsed.proofUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[11px] text-[#0090FE] hover:underline flex items-center gap-1 font-semibold"
+                                        >
+                                          View Rejection Proof Image →
+                                        </a>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                              } catch {}
+                              return String(sub.decline_reason);
+                            })()}
                           </td>
                           <td className="p-3 text-right">
                             {sub.status !== 'approved' && (
