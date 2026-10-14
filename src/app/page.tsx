@@ -23,9 +23,9 @@ export default function LandingPage() {
 
   React.useEffect(() => {
     if (user && !isLoading) {
-      router.replace('/dashboard');
+      window.location.replace('/dashboard');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading]);
 
   return (
     <div className="min-h-screen bg-[#F7F7F8] flex flex-col">

@@ -26,8 +26,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unsupported mobile network' }, { status: 400 });
     }
 
-    if (!phone || phone.length < 11) {
-      return NextResponse.json({ error: 'Valid 11-digit mobile phone number is required' }, { status: 400 });
+    let cleanPhone = phone ? String(phone).replace(/[^0-9]/g, '') : '';
+    if (cleanPhone.startsWith('234') && cleanPhone.length === 13) {
+      cleanPhone = '0' + cleanPhone.slice(3);
+    }
+
+    if (!cleanPhone || cleanPhone.length !== 11) {
+      return NextResponse.json({ error: 'Valid 11-digit mobile phone number is required (e.g. 08012345678)' }, { status: 400 });
     }
 
     const amountKobo = BigInt(amt) * BigInt(100);
@@ -51,7 +56,7 @@ export async function POST(request: Request) {
     // 2. Call SmartAPI (Sabuss) provider
     const airtimeResult = await purchaseAirtime({
       network,
-      phone,
+      phone: cleanPhone,
       amount: amt,
       reference,
     });
@@ -61,7 +66,7 @@ export async function POST(request: Request) {
     await adminSupabase.from('temutask_airtime_purchases').insert({
       user_id: user.id,
       network,
-      phone,
+      phone: cleanPhone,
       amount_naira: amt,
       amount_kobo: amountKobo.toString(),
       reference,

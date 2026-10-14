@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { formatNaira } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Copy, Check, Sparkles, TrendingUp, UserCheck } from 'lucide-react';
+import { Users, Copy, Check, Sparkles, TrendingUp, UserCheck, Share2 } from 'lucide-react';
 
 export default function ReferralsPage() {
   const { user, profile, wallet } = useAuth();
@@ -66,14 +66,18 @@ export default function ReferralsPage() {
       ? `https://temutasks.com/?ref=${effectiveReferralCode}`
       : '';
 
+  const getInviteMessage = () =>
+    `You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
+
   const copyReferralLink = async () => {
     if (!referralUrl) return;
+    const textToCopy = getInviteMessage();
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(referralUrl);
+        await navigator.clipboard.writeText(textToCopy);
       } else {
         const textArea = document.createElement('textarea');
-        textArea.value = referralUrl;
+        textArea.value = textToCopy;
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');
@@ -83,6 +87,24 @@ export default function ReferralsPage() {
       setTimeout(() => setCopied(false), 2500);
     } catch (err) {
       console.error('Copy failed:', err);
+    }
+  };
+
+  const shareReferral = async () => {
+    if (!referralUrl) return;
+    const textToShare = getInviteMessage();
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Earn ₦1,000 to ₦5,000 Daily on TemuTasks',
+          text: textToShare,
+        });
+      } catch (e) {
+        // Ignored if cancelled
+      }
+    } else {
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(textToShare)}`;
+      window.open(whatsappUrl, '_blank');
     }
   };
 
@@ -126,20 +148,34 @@ export default function ReferralsPage() {
           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
             <div
               onClick={copyReferralLink}
-              title="Click to copy referral link"
+              title="Click to copy invite message"
               className="w-full bg-white px-4 py-3 rounded-lg border border-[#E5E7EB] text-sm font-mono text-[#111827] truncate cursor-pointer hover:border-[#F95700] select-all"
             >
               {referralUrl || 'Generating referral link...'}
             </div>
-            <Button
-              size="md"
-              variant="primary"
-              onClick={copyReferralLink}
-              className="w-full sm:w-auto shrink-0"
-              leftIcon={copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            >
-              {copied ? 'Copied Link!' : 'Copy Referral Link'}
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                size="md"
+                variant={copied ? 'primary' : 'outline'}
+                onClick={copyReferralLink}
+                className="flex-1 sm:flex-initial shrink-0"
+                leftIcon={copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+              >
+                {copied ? 'Copied Invite!' : 'Copy Invite'}
+              </Button>
+              <Button
+                size="md"
+                variant="primary"
+                onClick={shareReferral}
+                className="flex-1 sm:flex-initial shrink-0"
+                leftIcon={<Share2 className="w-4 h-4" />}
+              >
+                Share
+              </Button>
+            </div>
+          </div>
+          <div className="mt-2 pt-3 border-t border-[#F95700]/15 text-xs text-[#6B7280] italic">
+            &ldquo;You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
           </div>
         </Card>
 

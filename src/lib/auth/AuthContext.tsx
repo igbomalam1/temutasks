@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (typeof window !== 'undefined') {
             const path = window.location.pathname;
             if (path === '/' || path === '/login') {
-              window.location.href = '/dashboard';
+              window.location.replace('/dashboard');
             }
           }
         } else {

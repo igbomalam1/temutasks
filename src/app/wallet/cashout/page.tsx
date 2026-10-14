@@ -188,7 +188,7 @@ export default function CashOutPage() {
               variant="primary"
               className="w-full text-base mt-2"
               isLoading={isLoading}
-              disabled={requestedKobo > balance || amount < 500}
+              disabled={requestedKobo > balance || amount < 1000}
             >
               Request Cash Out of {formatNairaPlain(amount)}
             </Button>

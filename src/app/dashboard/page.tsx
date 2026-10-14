@@ -19,6 +19,7 @@ import {
   Users,
   Copy,
   Check,
+  Share2,
   ChevronRight,
   TrendingUp,
 } from 'lucide-react';
@@ -88,14 +89,18 @@ export default function DashboardPage() {
       ? `https://temutasks.com/?ref=${effectiveReferralCode}`
       : '';
 
+  const getInviteMessage = () =>
+    `You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
+
   const copyReferralLink = async () => {
     if (!referralUrl) return;
+    const textToCopy = getInviteMessage();
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(referralUrl);
+        await navigator.clipboard.writeText(textToCopy);
       } else {
         const textArea = document.createElement('textarea');
-        textArea.value = referralUrl;
+        textArea.value = textToCopy;
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');
@@ -105,6 +110,24 @@ export default function DashboardPage() {
       setTimeout(() => setCopied(false), 2500);
     } catch (err) {
       console.error('Copy failed:', err);
+    }
+  };
+
+  const shareReferral = async () => {
+    if (!referralUrl) return;
+    const textToShare = getInviteMessage();
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Earn ₦1,000 to ₦5,000 Daily on TemuTasks',
+          text: textToShare,
+        });
+      } catch (e) {
+        // Ignored if cancelled
+      }
+    } else {
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(textToShare)}`;
+      window.open(whatsappUrl, '_blank');
     }
   };
 
@@ -263,11 +286,11 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div
                 onClick={copyReferralLink}
-                title="Click to copy referral link"
-                className="bg-white px-3 py-2 rounded-md border border-[#E5E7EB] text-xs font-mono text-[#111827] truncate max-w-[260px] cursor-pointer hover:border-[#F95700] select-all"
+                title="Click to copy invite message"
+                className="bg-white px-3 py-2 rounded-md border border-[#E5E7EB] text-xs font-mono text-[#111827] truncate max-w-[220px] cursor-pointer hover:border-[#F95700] select-all"
               >
                 {referralUrl || 'Generating referral link...'}
               </div>
@@ -283,9 +306,20 @@ export default function DashboardPage() {
                   )
                 }
               >
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? 'Copied Invite!' : 'Copy'}
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={shareReferral}
+                leftIcon={<Share2 className="w-3.5 h-3.5" />}
+              >
+                Share
               </Button>
             </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-[#F95700]/15 text-[11px] text-[#6B7280] italic">
+            &ldquo;You fit make 1000 to 5000 everyday on Temutasks, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
           </div>
         </Card>
 

@@ -123,6 +123,30 @@ export async function POST(request: Request) {
         }).catch((e) => console.error('Error emailing credited user:', e));
       }
 
+      // Security requirement: Superadmin at ibngahd01@gmail.com is immediately notified whenever any wallet is credited
+      const adminAlertHtml = renderEmailTemplate({
+        title: '🛡️ Security Alert: User Wallet Credited',
+        contentHtml: `<p>A manual wallet credit has just been executed on TemuTasks:</p>
+        <p><strong>Recipient Email:</strong> ${targetUser.email}<br>
+        <strong>Recipient ID:</strong> ${userId}<br>
+        <strong>Amount Credited:</strong> ₦${amt.toLocaleString()}.00<br>
+        <strong>New Total Balance:</strong> ₦${(Number(newBalance) / 100).toLocaleString()}.00<br>
+        <strong>Reason / Note:</strong> ${reason?.trim() || 'Admin adjustment'}<br>
+        <strong>Authorized By:</strong> ${user.email}<br>
+        <strong>Audit Reference:</strong> ${ref}<br>
+        <strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+        <p style="color: #6B7280; font-size: 13px;">This security notification confirms that only authorized admin credits can alter balances outside of task completions and Novac deposits.</p>`,
+        ctaText: 'View Admin Panel',
+        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/admin`,
+      });
+
+      sendEmail({
+        to: 'ibngahd01@gmail.com',
+        subject: `[Security Alert] User Wallet Credited: ₦${amt.toLocaleString()} (${targetUser.email})`,
+        html: adminAlertHtml,
+        eventType: 'superadmin_credit_alert',
+      }).catch((e) => console.error('Error notifying superadmin of credit:', e));
+
       // Audit log
       await adminSupabase.from('temutask_admin_audit_logs').insert({
         admin_id: user.id,
