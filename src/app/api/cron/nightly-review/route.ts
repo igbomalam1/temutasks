@@ -75,17 +75,47 @@ export async function POST(request: Request) {
           continue;
         }
 
-        // 2. Commission allocation
-        if (referrerId && commKobo > BigInt(0)) {
-          await executeWalletTransaction({
-            userId: referrerId,
-            amountKobo: commKobo,
-            direction: 'credit',
-            transactionType: 'commission',
-            description: `Lifetime referral commission (Nightly Review) for task "${task.title}"`,
-            relatedId: sub.id,
-            idempotencyKey: `AUTO-COMM-${sub.id}`,
-          });
+        // 2. Lifetime Referral Commission allocation & ₦25 First Task Bonus
+        if (referrerId) {
+          if (commKobo > BigInt(0)) {
+            await executeWalletTransaction({
+              userId: referrerId,
+              amountKobo: commKobo,
+              direction: 'credit',
+              transactionType: 'commission',
+              description: `Lifetime referral commission (Nightly Review) for task "${task.title}"`,
+              relatedId: sub.id,
+              idempotencyKey: `AUTO-COMM-${sub.id}`,
+            });
+          }
+
+          // Check & Credit ₦25 First Task Referral Bonus (awarded once per referred user)
+          const firstTaskBonusKey = `REF-FIRST-TASK-${referrerId}-${participantId}`;
+          const { data: alreadyRewarded } = await adminSupabase
+            .from('temutask_wallet_ledger')
+            .select('id')
+            .eq('idempotency_key', firstTaskBonusKey)
+            .maybeSingle();
+
+          if (!alreadyRewarded) {
+            await executeWalletTransaction({
+              userId: referrerId,
+              amountKobo: BigInt(2500), // ₦25.00
+              direction: 'credit',
+              transactionType: 'commission',
+              description: `First Task Referral Bonus (₦25): Referred friend completed their first task!`,
+              relatedId: sub.id,
+              idempotencyKey: firstTaskBonusKey,
+            });
+
+            await adminSupabase.from('temutask_notifications').insert({
+              user_id: referrerId,
+              title: '₦25 Referral Bonus Credited! 🎉',
+              message: `Your referred friend completed their first task! ₦25 referral bonus has been credited to your wallet balance.`,
+              type: 'referral_bonus',
+              link: '/referrals',
+            });
+          }
         } else if (commKobo > BigInt(0)) {
           // Record unallocated platform commission
           await adminSupabase.from('temutask_wallet_ledger').insert({

@@ -58,6 +58,10 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FFF5F0] border border-[#F95700]/30 text-[#F95700] text-xs sm:text-sm font-semibold mb-6 shadow-xs animate-in fade-in">
+          <span>🎁</span>
+          <span>Get <strong>₦25 instant welcome bonus</strong> as soon as you register!</span>
+        </div>
         <h1 className="text-4xl sm:text-6xl font-extrabold text-[#111827] tracking-tight mb-6 leading-tight">
           Get real people to accept your{' '}
           <span className="text-[#F95700] underline decoration-[#F95700]/30">Temu invites</span>,{' '}

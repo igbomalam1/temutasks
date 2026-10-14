@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
+import { executeWalletTransaction } from '@/lib/wallet';
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -88,6 +89,16 @@ export async function GET(request: Request) {
           { onConflict: 'user_id' }
         );
 
+        // Credit ₦25 Welcome Registration Bonus (2,500 kobo)
+        await executeWalletTransaction({
+          userId: user.id,
+          amountKobo: BigInt(2500),
+          direction: 'credit',
+          transactionType: 'reward',
+          description: 'Welcome Bonus: ₦25 instant registration reward',
+          idempotencyKey: `WELCOME-BONUS-${user.id}`,
+        });
+
         // Initialize notification preferences
         await adminSupabase.from('temutask_notification_preferences').upsert(
           {
@@ -102,30 +113,31 @@ export async function GET(request: Request) {
         // Create welcome in-app notification
         await adminSupabase.from('temutask_notifications').insert({
           user_id: user.id,
-          title: 'Welcome to TemuTasks! 🚀',
+          title: '₦25 Welcome Bonus Credited! 🎉',
           message:
-            'Start completing tasks to earn rewards, share your referral link to earn lifetime commissions, or fund a task to boost your Temu invitations.',
+            'Welcome to TemuTasks! Your ₦25 registration bonus has been credited to your wallet balance. Complete tasks to earn more or share your referral link to earn ₦25 when friends complete their first task!',
           type: 'welcome',
-          link: '/dashboard',
+          link: '/wallet',
         });
 
         // Send welcome email
         if (user.email) {
           const welcomeHtml = renderEmailTemplate({
-            title: 'Welcome to TemuTasks! 🚀',
+            title: 'Welcome to TemuTasks! 🚀 (₦25 Credited)',
             contentHtml: `<p>Hello ${fullName},</p>
             <p>Welcome to <strong>TemuTasks</strong> — Nigeria's premier Temu participant rewards and task fulfillment platform.</p>
+            <p>🎉 <strong>₦25 Welcome Bonus Credited:</strong> We have credited ₦25 directly to your wallet balance to welcome you to the platform!</p>
             <p><strong>Your Account Details:</strong></p>
             <ul>
               <li><strong>Email:</strong> ${user.email}</li>
               <li><strong>Referral Code:</strong> <strong style="color: #F95700;">${uniqueCode}</strong></li>
-              <li><strong>Referral Link:</strong> ${origin}/login?ref=${uniqueCode}</li>
+              <li><strong>Referral Link:</strong> ${origin}/?ref=${uniqueCode}</li>
             </ul>
-            <p><strong>How to Get Started:</strong></p>
+            <p><strong>How to Earn More:</strong></p>
             <ol>
-              <li><strong>Browse Available Tasks:</strong> Complete simple Temu invitation clicks and earn cash rewards directly to your wallet.</li>
-              <li><strong>Invite Friends:</strong> Earn ₦10 or ₦50 lifetime commission every time your friends complete tasks.</li>
-              <li><strong>Create Tasks:</strong> Need Temu clicks or new users for your own games? Launch a funded task in seconds!</li>
+              <li><strong>Complete Available Tasks:</strong> Accept simple Temu invitations and earn instant verified cash.</li>
+              <li><strong>Refer Friends:</strong> Earn an extra <strong>₦25 bonus</strong> when your friend completes their first task, plus <strong>₦10 to ₦50 lifetime commissions</strong> on every task they complete!</li>
+              <li><strong>Create Tasks:</strong> Launch funded tasks to get real clicks for your Temu games.</li>
             </ol>`,
             ctaText: 'Go to Dashboard',
             ctaUrl: `${origin}/dashboard`,
@@ -133,7 +145,7 @@ export async function GET(request: Request) {
 
           sendEmail({
             to: user.email,
-            subject: 'Welcome to TemuTasks! 🚀 Get Started & Earn Rewards',
+            subject: 'Welcome to TemuTasks! 🚀 ₦25 Welcome Bonus Credited',
             html: welcomeHtml,
             eventType: 'user_welcome',
           }).catch((e) => console.error('Error sending welcome email:', e));

@@ -25,6 +25,8 @@ import {
   ChevronRight,
   TrendingUp,
   Receipt,
+  Gift,
+  X,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -40,6 +42,23 @@ export default function DashboardPage() {
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
   const [selectedTx, setSelectedTx] = useState<TransactionReceiptData | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('temutask_welcome_dismissed');
+      if (dismissed === 'true') {
+        setShowWelcomeBanner(false);
+      }
+    }
+  }, []);
+
+  const dismissWelcomeBanner = () => {
+    setShowWelcomeBanner(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('temutask_welcome_dismissed', 'true');
+    }
+  };
 
   const supabase = createClient();
 
@@ -117,7 +136,7 @@ export default function DashboardPage() {
       : '';
 
   const getInviteMessage = () =>
-    `You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
+    `🎉 Get ₦25 instant welcome bonus as soon as you register on TemuTasks! You fit make ₦1,000 to ₦5,000 everyday completing simple Temu tasks (accepting invitation links), then cash out instantly to OPay/PalmPay or buy cheap airtime. Register here: ${referralUrl}`;
 
   const copyReferralLink = async () => {
     if (!referralUrl) return;
@@ -165,6 +184,73 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
+        {/* New User Welcome Banner */}
+        {showWelcomeBanner && (
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFF5F0] via-[#FFFBEB] to-[#FEF3C7] border-2 border-[#F95700]/30 p-5 sm:p-6 shadow-sm">
+            <button
+              onClick={dismissWelcomeBanner}
+              className="absolute top-3.5 right-3.5 p-1.5 rounded-full text-[#6B7280] hover:text-[#111827] hover:bg-black/5 transition-colors"
+              title="Dismiss banner"
+              aria-label="Dismiss banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 pr-6 sm:pr-8">
+              <div className="space-y-2 max-w-2xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#F95700] text-white text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                    <Gift className="w-3.5 h-3.5" />
+                    ₦25 Welcome Bonus
+                  </span>
+                  <span className="text-xs text-[#10B981] font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Active in your wallet balance
+                  </span>
+                </div>
+
+                <h2 className="text-lg sm:text-xl font-extrabold text-[#111827] leading-snug">
+                  Welcome to TemuTasks! Earn cash doing simple tasks or promote your links.
+                </h2>
+
+                <p className="text-xs sm:text-sm text-[#4B5563] leading-relaxed">
+                  You received <strong>₦25 instant welcome bonus</strong> on registration. You can earn an extra <strong>₦25 instant bonus</strong> for every friend you refer once they complete their first task, plus <strong>continuous lifetime commissions</strong> on every task they ever complete!
+                </p>
+              </div>
+
+              {/* Referral Actions Inside Banner */}
+              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={shareReferral}
+                  className="bg-[#F95700] hover:bg-[#E04E00] text-white font-bold shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share &amp; Earn ₦25 per Friend
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={copyReferralLink}
+                  className="bg-white hover:bg-[#F9FAFB] text-[#111827] border-[#E5E7EB] font-semibold text-xs flex items-center justify-center gap-1.5"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                      Copied Invite Link!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
+                      Copy Referral Invite
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Primary Wallet Hero Card */}
         <Card className="bg-gradient-to-br from-[#111827] to-[#1F2937] text-white border-none shadow-md p-6 sm:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -302,8 +388,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <p className="text-xs text-[#6B7280]">
-                Earn ₦10 on every existing user task & ₦50 on every new user task completed by
-                anyone you refer for life!
+                Every friend gets <strong>₦25 welcome bonus</strong>. Earn <strong>₦25</strong> on their first task + ₦10 to ₦50 lifetime commissions on every task they complete!
               </p>
             </div>
 
@@ -340,7 +425,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-[#F95700]/15 text-[11px] text-[#6B7280] italic">
-            &ldquo;You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
+            &ldquo;🎉 Get ₦25 instant welcome bonus as soon as you register on TemuTasks! You fit make ₦1,000 to ₦5,000 everyday completing simple Temu tasks...&rdquo;
           </div>
         </Card>
 

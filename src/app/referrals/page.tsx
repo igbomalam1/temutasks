@@ -67,7 +67,7 @@ export default function ReferralsPage() {
       : '';
 
   const getInviteMessage = () =>
-    `You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link ${referralUrl}`;
+    `🎉 Get ₦25 instant welcome bonus as soon as you register on TemuTasks! You fit make ₦1,000 to ₦5,000 everyday completing simple Temu tasks (accepting invitation links), then cash out instantly to OPay/PalmPay or buy cheap airtime. Register here: ${referralUrl}`;
 
   const copyReferralLink = async () => {
     if (!referralUrl) return;
@@ -117,7 +117,7 @@ export default function ReferralsPage() {
         <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] space-y-1">
           <h1 className="text-xl sm:text-2xl font-bold text-[#111827]">Referral Program</h1>
           <p className="text-xs sm:text-sm text-[#6B7280]">
-            Earn lifetime passive income from everyone you invite to TemuTasks.
+            Earn lifetime passive income and instant cash rewards from everyone you invite to TemuTasks.
           </p>
         </div>
 
@@ -126,14 +126,13 @@ export default function ReferralsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="text-xs font-bold text-[#F95700] uppercase tracking-wider">
-                Permanent Referral Link
+                Permanent Referral Program
               </span>
               <h2 className="text-xl font-extrabold text-[#111827]">
-                Share your link, earn lifetime commissions
+                Share your link, earn ₦25 bonus + lifetime commissions
               </h2>
               <p className="text-xs text-[#6B7280] max-w-lg">
-                Whenever your referred friends complete tasks, you get <strong>₦10+</strong> on
-                every existing-user task and <strong>₦50+</strong> on every new-user task. Forever!
+                Your friends get <strong>₦25 instant welcome bonus</strong> on signup. When they complete their first task, you receive a <strong>₦25 instant referral reward</strong> — plus ongoing lifetime commissions: <strong>₦10+</strong> on every existing-user task and <strong>₦50+</strong> on every new-user task forever!
               </p>
             </div>
 
@@ -175,9 +174,42 @@ export default function ReferralsPage() {
             </div>
           </div>
           <div className="mt-2 pt-3 border-t border-[#F95700]/15 text-xs text-[#6B7280] italic">
-            &ldquo;You fit make 1000 to 5000 everyday on Temutasks and you fit withdraw am immediately or use am buy airtime, Them dey share money for completing simple temu tasks like accepting invitation link. Join with my ref link...&rdquo;
+            &ldquo;🎉 Get ₦25 instant welcome bonus as soon as you register on TemuTasks! You fit make ₦1,000 to ₦5,000 everyday completing simple Temu tasks...&rdquo;
           </div>
         </Card>
+
+        {/* 3 Steps to Referral Earning */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#FFF5F0] text-[#F95700] font-black flex items-center justify-center text-sm mb-2">
+              1
+            </div>
+            <h4 className="text-sm font-bold text-[#111827] mb-1">Friend Registers (₦25)</h4>
+            <p className="text-xs text-[#6B7280]">
+              Your friend signs up using your link and instantly gets <strong>₦25 welcome bonus</strong> in their wallet.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#0090FE] font-black flex items-center justify-center text-sm mb-2">
+              2
+            </div>
+            <h4 className="text-sm font-bold text-[#111827] mb-1">First Task Done (₦25 to You)</h4>
+            <p className="text-xs text-[#6B7280]">
+              Once your referred friend completes their <strong>first task</strong>, you automatically receive <strong>₦25 instant reward</strong> in your wallet!
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] text-[#10B981] font-black flex items-center justify-center text-sm mb-2">
+              3
+            </div>
+            <h4 className="text-sm font-bold text-[#111827] mb-1">Lifetime Commissions</h4>
+            <p className="text-xs text-[#6B7280]">
+              You keep earning <strong>₦10 to ₦50 commission</strong> on every single task they complete, forever.
+            </p>
+          </div>
+        </div>
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

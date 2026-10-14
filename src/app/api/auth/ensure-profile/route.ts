@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { executeWalletTransaction } from '@/lib/wallet';
 
 export async function POST(request: Request) {
   try {
@@ -85,6 +86,26 @@ export async function POST(request: Request) {
           },
           { onConflict: 'user_id' }
         );
+
+      // Credit ₦25 Welcome Registration Bonus (2,500 kobo)
+      await executeWalletTransaction({
+        userId: user.id,
+        amountKobo: BigInt(2500),
+        direction: 'credit',
+        transactionType: 'reward',
+        description: 'Welcome Bonus: ₦25 instant registration reward',
+        idempotencyKey: `WELCOME-BONUS-${user.id}`,
+      });
+
+      // Notification
+      await adminSupabase.from('temutask_notifications').insert({
+        user_id: user.id,
+        title: '₦25 Welcome Bonus Credited! 🎉',
+        message:
+          'Welcome to TemuTasks! We have added ₦25 registration bonus to your wallet balance. Complete tasks to earn more or share your referral link to earn ₦25 when friends complete their first task!',
+        type: 'welcome',
+        link: '/wallet',
+      });
 
       // Ensure notification preferences exist
       await adminSupabase

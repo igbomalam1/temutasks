@@ -46,7 +46,7 @@ export function ShareTaskModal({
   const shareUrl = `${origin}/tasks?taskId=${task.id}${referralCode ? `&ref=${referralCode}` : ''}`;
   const rewardFormatted = formatNaira(BigInt(task.reward_per_participant_kobo || 0));
 
-  const shareText = `Accept my Temu invitation task on TemuTasks and earn ${rewardFormatted}! Anyone can click this link to complete the task and withdraw or buy airtime immediately: ${shareUrl}`;
+  const shareText = `🎉 Get ₦25 instant welcome bonus as soon as you register on TemuTasks! Plus accept my Temu invitation task to earn an additional ${rewardFormatted}! Anyone can complete this quick task and cash out or buy airtime immediately: ${shareUrl}`;
 
   const handleCopyLink = async () => {
     try {
