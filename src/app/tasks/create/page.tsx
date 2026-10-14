@@ -231,23 +231,10 @@ export default function CreateTaskPage() {
         return;
       }
 
-      // Wallet Success: Direct In-App Activation
+      // Wallet Success: Direct In-App Activation & Instant Redirect to My Tasks
       if (data.method === 'wallet') {
         await refreshProfile();
-        setModalState({
-          isOpen: true,
-          type: 'success',
-          title: 'Task(s) Published Live! 🚀',
-          message:
-            taskType === 'combined'
-              ? `Both your New User (slots: ${newQuantity}) and Existing User (slots: ${existingQuantity}) tasks have been successfully funded with your wallet and are now live!`
-              : `Your task (${quantity} slots) has been successfully funded with your wallet and published to the marketplace!`,
-          actionText: 'View My Tasks',
-          onAction: () => {
-            window.location.href = '/my-tasks';
-          },
-        });
-        setIsSubmitting(false);
+        window.location.href = '/my-tasks?msg=Task+published+successfully';
         return;
       }
 

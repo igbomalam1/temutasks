@@ -261,6 +261,30 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(`${appUrl}/wallet?msg=Deposit+of+₦${amountNaira.toLocaleString()}+successful`);
+  } else if (order.order_type === 'task_reward_topup') {
+    const { taskId, newRewardKobo, newCommKobo, newBaseCostKobo, newTotalCostKobo, newPrice, topupNaira } = payload;
+
+    await supabase
+      .from('temutask_tasks')
+      .update({
+        reward_per_participant_kobo: newRewardKobo,
+        commission_per_referrer_kobo: newCommKobo,
+        base_cost_kobo: newBaseCostKobo,
+        total_cost_kobo: newTotalCostKobo,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', taskId);
+
+    // In-app notification
+    await supabase.from('temutask_notifications').insert({
+      user_id: order.user_id,
+      title: 'Task Reward Increased! 🚀',
+      message: `Your task price was successfully increased to ₦${newPrice}. Top-up payment of ₦${topupNaira} confirmed via Novac.`,
+      type: 'task_reward_increased',
+      link: '/my-tasks',
+    });
+
+    return NextResponse.redirect(`${appUrl}/my-tasks?msg=Task+reward+increased+successfully`);
   }
 
   return NextResponse.redirect(`${appUrl}/dashboard`);

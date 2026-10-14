@@ -25,16 +25,33 @@ import {
   UploadCloud,
   X,
   Image as ImageIcon,
+  TrendingUp,
+  Pause,
+  Play,
+  Lock,
+  Wallet,
+  CreditCard,
+  ArrowRight,
 } from 'lucide-react';
 import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
 
 export default function MyTasksPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, wallet, refreshProfile } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [shareTask, setShareTask] = useState<any | null>(null);
+
+  // Increase reward modal state
+  const [increaseRewardTask, setIncreaseRewardTask] = useState<any | null>(null);
+  const [newRewardPrice, setNewRewardPrice] = useState<number | ''>('');
+  const [rewardPaymentMethod, setRewardPaymentMethod] = useState<'wallet' | 'novac'>('wallet');
+  const [isSubmittingIncrease, setIsSubmittingIncrease] = useState(false);
+  const [increaseError, setIncreaseError] = useState('');
+
+  // Toggle status state
+  const [isTogglingStatus, setIsTogglingStatus] = useState<string | null>(null);
 
   // Decline dialog & rejection proof state
   const [declineSubId, setDeclineSubId] = useState<string | null>(null);
@@ -137,6 +154,86 @@ export default function MyTasksPage() {
       setActionMsg({ text: err.message || 'Error approving submission', type: 'error' });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleToggleStatus = async (task: any) => {
+    setIsTogglingStatus(task.id);
+    setActionMsg(null);
+    try {
+      const res = await fetch('/api/tasks/toggle-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: task.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionMsg({ text: data.error || 'Failed to update task status', type: 'error' });
+      } else {
+        setActionMsg({ text: data.message, type: 'success' });
+        await loadMyTasks();
+      }
+    } catch (err: any) {
+      setActionMsg({ text: err.message || 'Error updating status', type: 'error' });
+    } finally {
+      setIsTogglingStatus(null);
+    }
+  };
+
+  const handleIncreaseReward = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!increaseRewardTask || !newRewardPrice) return;
+
+    const currentPrice = Math.round(
+      Number(increaseRewardTask.base_cost_kobo) /
+        (Number(increaseRewardTask.quantity_requested) * 100)
+    );
+    const priceNum = Number(newRewardPrice);
+
+    if (isNaN(priceNum) || priceNum <= currentPrice) {
+      setIncreaseError(`New price must be higher than current price of ₦${currentPrice}`);
+      return;
+    }
+
+    setIsSubmittingIncrease(true);
+    setIncreaseError('');
+
+    try {
+      const res = await fetch('/api/tasks/increase-reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: increaseRewardTask.id,
+          newPrice: priceNum,
+          paymentMethod: rewardPaymentMethod,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setIncreaseError(data.error || 'Failed to increase task reward');
+        setIsSubmittingIncrease(false);
+        return;
+      }
+
+      if (data.method === 'novac' && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
+
+      // Direct wallet success
+      await refreshProfile();
+      setActionMsg({
+        text: `Task reward successfully increased to ₦${data.newRewardNaira} for the remaining ${data.remainingSlots} slots!`,
+        type: 'success',
+      });
+      setIncreaseRewardTask(null);
+      await loadMyTasks();
+    } catch (err: any) {
+      setIncreaseError(err.message || 'Error increasing task reward');
+    } finally {
+      setIsSubmittingIncrease(false);
     }
   };
 
@@ -305,48 +402,117 @@ export default function MyTasksPage() {
               const taskSubs = submissions[task.id] || [];
               const pendingCount = taskSubs.filter((s) => s.status === 'pending_review').length;
               const isExpanded = expandedTask === task.id;
+              const currentPrice = Math.round(
+                Number(task.base_cost_kobo) / (Number(task.quantity_requested) * 100)
+              );
+              const currentReward = Math.round(Number(task.reward_per_participant_kobo) / 100);
+              const remainingSlots = Math.max(0, task.quantity_requested - task.quantity_approved);
+              const walletBalanceKobo = wallet?.balance_kobo ? BigInt(wallet.balance_kobo) : BigInt(0);
+              const walletBalanceNaira = Number(walletBalanceKobo) / 100;
 
               return (
                 <Card key={task.id} className="p-5 sm:p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-bold text-[#111827]">
                           {parseTaskTitleAndInstructions(task.title).title}
                         </h3>
-                        <Badge variant={task.status === 'active' ? 'success' : 'secondary'}>
+                        <Badge
+                          variant={
+                            task.status === 'active'
+                              ? 'success'
+                              : task.status === 'paused'
+                              ? 'warning'
+                              : 'secondary'
+                          }
+                        >
                           {task.status.toUpperCase()}
                         </Badge>
                         {task.is_premium && <Badge variant="premium">PREMIUM</Badge>}
+                        <span className="text-xs font-bold text-[#10B981] bg-[#ECFDF5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
+                          Reward: ₦{currentReward} / slot
+                        </span>
                       </div>
-                      <div className="text-xs text-[#6B7280] flex items-center gap-2">
-                        <span>Slots: {task.quantity_approved} / {task.quantity_requested} approved</span>
+                      <div className="text-xs text-[#6B7280] flex flex-wrap items-center gap-2">
+                        <span>
+                          Slots: <strong>{task.quantity_approved}</strong> / {task.quantity_requested} approved ({remainingSlots} remaining)
+                        </span>
+                        <span>•</span>
+                        <span>Price: <strong>₦{currentPrice}</strong> / slot</span>
                         <span>•</span>
                         <a
                           href={task.invitation_link}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[#F95700] hover:underline flex items-center gap-1"
+                          className="text-[#F95700] hover:underline flex items-center gap-1 font-medium"
                         >
                           Temu Link <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       {pendingCount > 0 && (
                         <span className="text-xs font-bold text-[#F95700] bg-[#FFF5F0] px-2.5 py-1 rounded-full border border-[#F95700]/20">
                           {pendingCount} Pending Review
                         </span>
                       )}
 
+                      {/* Increase reward to reach more people button */}
+                      {remainingSlots > 0 && task.status !== 'completed' && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => {
+                            setIncreaseRewardTask(task);
+                            const suggested = currentPrice + 20;
+                            setNewRewardPrice(suggested);
+                            const topupNeeded = 20 * remainingSlots;
+                            setRewardPaymentMethod(
+                              walletBalanceNaira >= topupNeeded ? 'wallet' : 'novac'
+                            );
+                            setIncreaseError('');
+                          }}
+                          leftIcon={<TrendingUp className="w-3.5 h-3.5" />}
+                          className="text-xs font-bold shadow-sm"
+                        >
+                          Increase tasks reward to reach more people
+                        </Button>
+                      )}
+
+                      {/* Pause / Resume Button */}
+                      {remainingSlots > 0 && task.status !== 'completed' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleStatus(task)}
+                          disabled={isTogglingStatus === task.id}
+                          leftIcon={
+                            task.status === 'active' ? (
+                              <Pause className="w-3.5 h-3.5 text-[#F59E0B]" />
+                            ) : (
+                              <Play className="w-3.5 h-3.5 text-[#10B981]" />
+                            )
+                          }
+                          className="text-xs font-medium"
+                        >
+                          {isTogglingStatus === task.id
+                            ? 'Updating...'
+                            : task.status === 'active'
+                            ? 'Pause Task'
+                            : 'Resume Task'}
+                        </Button>
+                      )}
+
                       <Button
                         size="sm"
-                        variant="primary"
+                        variant="outline"
                         onClick={() => setShareTask(task)}
                         leftIcon={<Share2 className="w-3.5 h-3.5" />}
+                        className="text-xs"
                       >
-                        Share Task
+                        Share
                       </Button>
 
                       <Button
@@ -354,8 +520,13 @@ export default function MyTasksPage() {
                         variant="outline"
                         onClick={() => setExpandedTask(isExpanded ? null : task.id)}
                         rightIcon={
-                          isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                          isExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )
                         }
+                        className="text-xs"
                       >
                         {isExpanded ? 'Hide' : `Submissions (${taskSubs.length})`}
                       </Button>
@@ -658,6 +829,236 @@ export default function MyTasksPage() {
             </Card>
           </div>
         )}
+
+        {/* Increase Task Reward Modal */}
+        {increaseRewardTask && (() => {
+          const currentPrice = Math.round(
+            Number(increaseRewardTask.base_cost_kobo) /
+              (Number(increaseRewardTask.quantity_requested) * 100)
+          );
+          const currentReward = Math.round(
+            Number(increaseRewardTask.reward_per_participant_kobo) / 100
+          );
+          const remainingSlots = Math.max(
+            0,
+            increaseRewardTask.quantity_requested - increaseRewardTask.quantity_approved
+          );
+          const priceNum = Number(newRewardPrice) || 0;
+          const priceDiff = Math.max(0, priceNum - currentPrice);
+          const topupCost = priceDiff * remainingSlots;
+          const isNewUser = increaseRewardTask.task_type === 'new_user';
+          const newParticipantReward = Math.round(
+            isNewUser ? (priceNum * 400) / 500 : (priceNum * 80) / 100
+          );
+          const walletBalanceKobo = wallet?.balance_kobo ? BigInt(wallet.balance_kobo) : BigInt(0);
+          const walletBalanceNaira = Number(walletBalanceKobo) / 100;
+          const hasSufficientWallet = walletBalanceNaira >= topupCost;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in">
+              <Card className="max-w-lg w-full p-6 space-y-4 shadow-2xl bg-white max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#FFF5F0] text-[#F95700] flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#111827]">
+                        Increase Task Reward
+                      </h3>
+                      <p className="text-xs text-[#6B7280]">
+                        Boost payouts to attract more users to complete your task faster
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIncreaseRewardTask(null);
+                      setIncreaseError('');
+                    }}
+                    className="text-[#9CA3AF] hover:text-[#111827] p-1"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Locked Link Notice */}
+                <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-[#111827]">
+                    <Lock className="w-3.5 h-3.5 text-[#6B7280]" />
+                    <span>Invitation Link (Locked)</span>
+                  </div>
+                  <p className="font-mono text-[#4B5563] truncate text-[11px] bg-white p-1.5 rounded border border-[#E5E7EB]">
+                    {increaseRewardTask.invitation_link}
+                  </p>
+                  <p className="text-[11px] text-[#6B7280]">
+                    Task link cannot be edited to maintain invite verification integrity.
+                  </p>
+                </div>
+
+                {/* Current Stats */}
+                <div className="grid grid-cols-3 gap-2.5 text-center text-xs">
+                  <div className="p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[11px] text-[#6B7280] block">Current Slot Cost</span>
+                    <strong className="text-sm text-[#111827]">₦{currentPrice}</strong>
+                  </div>
+                  <div className="p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[11px] text-[#6B7280] block">Current Reward</span>
+                    <strong className="text-sm text-[#10B981]">₦{currentReward}</strong>
+                  </div>
+                  <div className="p-2.5 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[11px] text-[#6B7280] block">Remaining Slots</span>
+                    <strong className="text-sm text-[#F95700]">{remainingSlots}</strong>
+                  </div>
+                </div>
+
+                <form onSubmit={handleIncreaseReward} className="space-y-4">
+                  {/* New Price Input */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#111827] mb-1">
+                      New Total Price per Participant (₦)
+                    </label>
+                    <Input
+                      type="number"
+                      min={currentPrice + 5}
+                      step={5}
+                      value={newRewardPrice}
+                      onChange={(e) =>
+                        setNewRewardPrice(e.target.value === '' ? '' : Number(e.target.value))
+                      }
+                      placeholder={`e.g. ${currentPrice + 20}`}
+                      required
+                      className="font-bold text-base"
+                    />
+                    <span className="text-[11px] text-[#6B7280] mt-1 block">
+                      Must be higher than current price (₦{currentPrice}). Higher rewards appear top in task listings.
+                    </span>
+                  </div>
+
+                  {/* Live Top-up Calculation Box */}
+                  {priceNum > currentPrice && (
+                    <div className="p-3.5 bg-[#FFF5F0] border border-[#F95700]/30 rounded-xl space-y-2 text-xs">
+                      <div className="flex justify-between items-center text-[#4B5563]">
+                        <span>Price Increase per Slot:</span>
+                        <span className="font-bold text-[#F95700]">+₦{priceDiff}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[#4B5563]">
+                        <span>Remaining Slots to Top-up:</span>
+                        <span className="font-bold text-[#111827]">{remainingSlots} slots</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[#4B5563]">
+                        <span>New Participant Reward:</span>
+                        <span className="font-bold text-[#10B981]">₦{newParticipantReward} / slot</span>
+                      </div>
+                      <div className="pt-2 border-t border-[#F95700]/20 flex justify-between items-center text-sm font-black text-[#111827]">
+                        <span>Total Top-up Payment:</span>
+                        <span className="text-[#F95700] text-base">₦{topupCost.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Payment Method Selector */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-[#111827]">
+                      Select Payment Method for Top-up:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setRewardPaymentMethod('wallet')}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          rewardPaymentMethod === 'wallet'
+                            ? 'border-[#F95700] bg-[#FFF5F0] ring-2 ring-[#F95700]/20'
+                            : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Wallet
+                            className={`w-4 h-4 ${
+                              rewardPaymentMethod === 'wallet' ? 'text-[#F95700]' : 'text-[#6B7280]'
+                            }`}
+                          />
+                          <span className="text-xs font-bold text-[#111827]">Wallet Balance</span>
+                        </div>
+                        <span className="text-[11px] block text-[#6B7280]">
+                          Available: <strong>₦{walletBalanceNaira.toLocaleString()}</strong>
+                        </span>
+                        {!hasSufficientWallet && priceNum > currentPrice && (
+                          <span className="text-[10px] text-[#EF4444] font-semibold mt-0.5 block">
+                            Insufficient balance
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setRewardPaymentMethod('novac')}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          rewardPaymentMethod === 'novac'
+                            ? 'border-[#F95700] bg-[#FFF5F0] ring-2 ring-[#F95700]/20'
+                            : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <CreditCard
+                            className={`w-4 h-4 ${
+                              rewardPaymentMethod === 'novac' ? 'text-[#F95700]' : 'text-[#6B7280]'
+                            }`}
+                          />
+                          <span className="text-xs font-bold text-[#111827]">Novac Gateway</span>
+                        </div>
+                        <span className="text-[11px] block text-[#6B7280]">
+                          OPay, Cards &amp; Transfer
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Fair Reward Rule Callout */}
+                  <div className="p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl text-[11px] text-[#166534] leading-relaxed">
+                    💡 <strong>Fair Payout Policy:</strong> Only participants completing the task after this increase will receive the higher reward of <strong>₦{newParticipantReward}</strong>. Previous submissions retain their locked original amount.
+                  </div>
+
+                  {increaseError && (
+                    <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#DC2626]">
+                      {increaseError}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E7EB]">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIncreaseRewardTask(null);
+                        setIncreaseError('');
+                      }}
+                      disabled={isSubmittingIncrease}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      isLoading={isSubmittingIncrease}
+                      disabled={
+                        !newRewardPrice ||
+                        priceNum <= currentPrice ||
+                        (rewardPaymentMethod === 'wallet' && !hasSufficientWallet)
+                      }
+                      rightIcon={<ArrowRight className="w-4 h-4" />}
+                    >
+                      Pay ₦{topupCost.toLocaleString()} &amp; Increase Reward
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            </div>
+          );
+        })()}
 
         {/* Share Task Modal */}
         <ShareTaskModal

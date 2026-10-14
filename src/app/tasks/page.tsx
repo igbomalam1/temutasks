@@ -326,6 +326,40 @@ export default function AvailableTasksPage() {
           </div>
         </div>
 
+        {/* How It Works for Participants Banner */}
+        <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#FFF5F0] text-[#F95700] flex items-center justify-center font-bold text-xs">
+              💡
+            </div>
+            <h2 className="text-sm font-bold text-[#111827]">
+              How to Complete Tasks &amp; Earn Rewards
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] space-y-1">
+              <span className="w-5 h-5 rounded-full bg-[#111827] text-white flex items-center justify-center text-[10px] font-bold">1</span>
+              <p className="font-semibold text-[#111827]">Select a Task</p>
+              <p className="text-[11px] text-[#6B7280]">Pick an existing or new user task with remaining slots.</p>
+            </div>
+            <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] space-y-1">
+              <span className="w-5 h-5 rounded-full bg-[#111827] text-white flex items-center justify-center text-[10px] font-bold">2</span>
+              <p className="font-semibold text-[#111827]">Accept Invite on Temu</p>
+              <p className="text-[11px] text-[#6B7280]">Open the link in your Temu app &amp; accept the invite.</p>
+            </div>
+            <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] space-y-1">
+              <span className="w-5 h-5 rounded-full bg-[#111827] text-white flex items-center justify-center text-[10px] font-bold">3</span>
+              <p className="font-semibold text-[#111827]">Submit Temu Details</p>
+              <p className="text-[11px] text-[#6B7280]">Enter your Temu username &amp; email for verification.</p>
+            </div>
+            <div className="p-3 bg-[#ECFDF5] rounded-xl border border-[#A7F3D0] space-y-1">
+              <span className="w-5 h-5 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[10px] font-bold">4</span>
+              <p className="font-semibold text-[#065F46]">Get Paid Instantly</p>
+              <p className="text-[11px] text-[#047857]">Earnings credited directly to your wallet on approval.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Featured Shared Task Banner when accessed via shared link */}
         {featuredSharedTask && (
           <div className="bg-gradient-to-r from-[#FFF5F0] via-white to-[#FFF5F0] border-2 border-[#F95700] rounded-2xl p-5 sm:p-6 shadow-md space-y-4 animate-in fade-in">
@@ -558,9 +592,15 @@ export default function AvailableTasksPage() {
                       </div>
                     </div>
 
-                    <p className="text-xs text-[#6B7280] line-clamp-2">
-                      {parseTaskTitleAndInstructions(task.title).instructions}
-                    </p>
+                    <div className="bg-[#F9FAFB] rounded-lg p-2.5 border border-[#E5E7EB] text-xs space-y-1">
+                      <div className="text-[11px] font-bold text-[#374151] flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 text-[#F95700]" />
+                        <span>Task Instructions:</span>
+                      </div>
+                      <p className="text-xs text-[#4B5563] line-clamp-2 leading-relaxed">
+                        {parseTaskTitleAndInstructions(task.title).instructions}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="pt-4 mt-2 border-t border-[#E5E7EB] flex items-center gap-2">
@@ -700,37 +740,44 @@ export default function AvailableTasksPage() {
                 </button>
               </div>
 
-              <div className="bg-[#FFF5F0] p-3 rounded-lg border border-[#F95700]/20 text-xs text-[#111827] space-y-1">
+              <div className="bg-[#FFF5F0] p-3.5 rounded-xl border border-[#F95700]/25 text-xs text-[#111827] space-y-2.5">
                 <div className="font-bold flex items-center gap-1.5 text-[#F95700]">
-                  <AlertCircle className="w-4 h-4" /> Instructions
+                  <AlertCircle className="w-4 h-4" /> Task Instructions:
                 </div>
                 {isBatchModalOpen ? (
-                  <p>
-                    1. Enter your Temu name &amp; email once below to submit for all{' '}
-                    <strong>{batchTaskIds.length} selected tasks</strong> simultaneously.
-                    <br />
-                    2. Total combined reward:{' '}
-                    <strong className="text-[#10B981]">
-                      {formatNaira(totalBatchRewardKobo)}
-                    </strong>{' '}
-                    upon approval!
-                    <br />
-                    3. After submitting, open each task&apos;s Temu invitation link to accept the
-                    invites.
-                  </p>
+                  <div className="space-y-1.5 text-xs text-[#374151]">
+                    <div className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                      <span>Enter your Temu account username &amp; email below to submit for all <strong>{batchTaskIds.length} tasks</strong> at once.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                      <span>After submitting, click each task&apos;s Temu invitation link to accept the invites in your Temu app.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                      <span>Earn a combined <strong className="text-[#10B981]">{formatNaira(totalBatchRewardKobo)}</strong> once verified!</span>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="space-y-1.5">
-                    <p className="leading-relaxed">
+                  <div className="space-y-2">
+                    <p className="leading-relaxed bg-white/80 p-2.5 rounded-lg border border-[#F95700]/15 text-[#374151]">
                       {parseTaskTitleAndInstructions(selectedTask?.title).instructions}
                     </p>
-                    <p className="text-[#6B7280] border-t border-[#F95700]/15 pt-1 text-[11px]">
-                      You will earn{' '}
-                      <strong className="text-[#10B981]">
-                        {selectedTask &&
-                          formatNaira(BigInt(selectedTask.reward_per_participant_kobo))}
-                      </strong>{' '}
-                      once your submission is verified by the task owner.
-                    </p>
+                    <div className="grid grid-cols-1 gap-1 text-[11px] text-[#4B5563]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[9px] font-bold shrink-0">1</span>
+                        <span>Click the link &amp; open in Temu app. Make sure to accept the invite.</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#F95700] text-white flex items-center justify-center text-[9px] font-bold shrink-0">2</span>
+                        <span>Submit your Temu name &amp; email below for verification.</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[9px] font-bold shrink-0">3</span>
+                        <span>Earn <strong className="text-[#10B981]">{selectedTask && formatNaira(BigInt(selectedTask.reward_per_participant_kobo))}</strong> upon verification!</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

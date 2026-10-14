@@ -37,6 +37,9 @@ export async function initiateNovacPayment(params: NovacInitiateParams): Promise
     amount: params.amount,
     currency: 'NGN',
     redirectUrl: params.redirectUrl,
+    channel: 'opay',
+    defaultChannel: 'opay',
+    paymentChannel: 'opay',
     checkoutCustomerData: {
       email: params.email,
       firstName: params.firstName || 'Customer',
@@ -46,6 +49,9 @@ export async function initiateNovacPayment(params: NovacInitiateParams): Promise
     checkoutCustomizationData: {
       paymentDescription: params.description || 'TemuTasks Payment',
       checkoutModalTitle: 'TemuTasks',
+      channel: 'opay',
+      defaultChannel: 'opay',
+      paymentChannel: 'opay',
     },
   };
 
