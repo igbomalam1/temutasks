@@ -2,6 +2,8 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const supabase = createClient();

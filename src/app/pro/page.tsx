@@ -8,12 +8,25 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { formatNaira } from '@/lib/utils';
 import { Sparkles, CheckCircle2, AlertCircle, CreditCard, Wallet } from 'lucide-react';
+import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
 
 export default function ProPage() {
   const { user, profile, wallet, refreshProfile, signInWithGoogle } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: StatusModalType;
+    title: string;
+    message?: string;
+  }>({
+    isOpen: false,
+    type: null,
+    title: '',
+    message: '',
+  });
 
   const balance = BigInt(wallet?.balance_kobo || 0);
   const proCostKobo = BigInt(20000); // ₦200 in kobo
@@ -28,6 +41,12 @@ export default function ProPage() {
     setIsProcessing(true);
     setErrorMsg('');
     setSuccessMsg('');
+    setModalState({
+      isOpen: true,
+      type: 'loading',
+      title: 'Activating Pro Membership...',
+      message: 'Debiting ₦200 from your wallet and activating your 14-day Pro tier...',
+    });
 
     try {
       const res = await fetch('/api/pro/upgrade', {
@@ -39,13 +58,34 @@ export default function ProPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || 'Failed to activate Pro membership');
+        const errorText = data.error || 'Failed to activate Pro membership';
+        setErrorMsg(errorText);
+        setModalState({
+          isOpen: true,
+          type: 'error',
+          title: 'Upgrade Failed',
+          message: errorText,
+        });
       } else {
-        setSuccessMsg('🎉 Successfully upgraded to TemuTasks Pro for 14 days!');
+        const successText = '🎉 Successfully upgraded to TemuTasks Pro for 14 days!';
+        setSuccessMsg(successText);
+        setModalState({
+          isOpen: true,
+          type: 'success',
+          title: 'Pro Activated! 🚀',
+          message: 'You now enjoy instant task alerts, multi-task batch submissions, and higher referral commissions!',
+        });
         await refreshProfile();
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Upgrade error');
+      const errorText = err.message || 'Upgrade error';
+      setErrorMsg(errorText);
+      setModalState({
+        isOpen: true,
+        type: 'error',
+        title: 'Connection Error',
+        message: errorText,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -61,6 +101,12 @@ export default function ProPage() {
     setIsProcessing(true);
     setErrorMsg('');
     setSuccessMsg('');
+    setModalState({
+      isOpen: true,
+      type: 'loading',
+      title: 'Connecting to Payment Gateway...',
+      message: 'Setting up secure Novac checkout for ₦200. Redirecting...',
+    });
 
     try {
       const res = await fetch('/api/pro/upgrade', {
@@ -72,13 +118,27 @@ export default function ProPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || 'Failed to initiate Novac checkout');
+        const errorText = data.error || 'Failed to initiate Novac checkout';
+        setErrorMsg(errorText);
+        setModalState({
+          isOpen: true,
+          type: 'error',
+          title: 'Checkout Error',
+          message: errorText,
+        });
         setIsProcessing(false);
       } else if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error processing payment');
+      const errorText = err.message || 'Error processing payment';
+      setErrorMsg(errorText);
+      setModalState({
+        isOpen: true,
+        type: 'error',
+        title: 'Connection Error',
+        message: errorText,
+      });
       setIsProcessing(false);
     }
   };
@@ -213,6 +273,23 @@ export default function ProPage() {
             )}
           </div>
         </Card>
+
+        {/* Status Modal Popup */}
+        <StatusModal
+          isOpen={modalState.isOpen}
+          type={modalState.type}
+          title={modalState.title}
+          message={modalState.message}
+          actionText={modalState.type === 'success' ? 'Go to Tasks' : 'Close'}
+          onAction={() => {
+            if (modalState.type === 'success') {
+              window.location.href = '/tasks';
+            } else {
+              setModalState((prev) => ({ ...prev, isOpen: false }));
+            }
+          }}
+          onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        />
       </div>
     </AppShell>
   );

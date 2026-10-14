@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { executeWalletTransaction } from '@/lib/wallet';

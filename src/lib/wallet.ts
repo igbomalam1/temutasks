@@ -16,7 +16,9 @@ export type TransactionType =
   | 'withdrawal_payout'
   | 'withdrawal_release'
   | 'pro_subscription_wallet'
-  | 'admin_adjustment';
+  | 'admin_adjustment'
+  | 'wallet_deposit'
+  | 'deposit';
 
 export interface WalletOperationParams {
   userId: string;

@@ -26,7 +26,8 @@ export function formatNairaPlain(nairaAmount: number): string {
 }
 
 export function generateRef(prefix: string = 'TT'): string {
+  const cleanPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `${prefix}-${timestamp}-${random}`;
+  return `${cleanPrefix}${timestamp}${random}`;
 }

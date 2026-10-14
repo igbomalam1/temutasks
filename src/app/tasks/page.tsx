@@ -18,10 +18,12 @@ import {
   Layers,
   CheckSquare,
   Square,
+  Share2,
 } from 'lucide-react';
+import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
 
 export default function AvailableTasksPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, signInWithGoogle } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
   const [userSubmissions, setUserSubmissions] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +33,11 @@ export default function AvailableTasksPage() {
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [batchTaskIds, setBatchTaskIds] = useState<string[]>([]);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+
+  // Share Task & Shared Link state
+  const [shareTask, setShareTask] = useState<any | null>(null);
+  const [featuredSharedTask, setFeaturedSharedTask] = useState<any | null>(null);
+  const [sharedTaskId, setSharedTaskId] = useState<string | null>(null);
 
   // Modal submission state
   const [temuUsername, setTemuUsername] = useState('');
@@ -84,6 +91,46 @@ export default function AvailableTasksPage() {
   useEffect(() => {
     loadTasks();
   }, [user]);
+
+  // Read shared task ID and referral code from URL query parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tId = params.get('taskId') || params.get('id');
+      const ref = params.get('ref');
+
+      if (ref) {
+        localStorage.setItem('temutask_ref', ref.trim().toUpperCase());
+      }
+
+      if (tId) {
+        setSharedTaskId(tId);
+      }
+    }
+  }, []);
+
+  // Fetch the shared task if present in the URL
+  useEffect(() => {
+    if (!sharedTaskId) return;
+
+    const fetchSharedTask = async () => {
+      try {
+        const { data: specificTask, error } = await supabase
+          .from('temutask_tasks')
+          .select('*')
+          .eq('id', sharedTaskId)
+          .maybeSingle();
+
+        if (specificTask && !error) {
+          setFeaturedSharedTask(specificTask);
+        }
+      } catch (err) {
+        console.error('Error fetching shared task:', err);
+      }
+    };
+
+    fetchSharedTask();
+  }, [sharedTaskId]);
 
   const filteredTasks = tasks.filter((t) => {
     if (filterType === 'all') return true;
@@ -250,6 +297,97 @@ export default function AvailableTasksPage() {
           </div>
         </div>
 
+        {/* Featured Shared Task Banner when accessed via shared link */}
+        {featuredSharedTask && (
+          <div className="bg-gradient-to-r from-[#FFF5F0] via-white to-[#FFF5F0] border-2 border-[#F95700] rounded-2xl p-5 sm:p-6 shadow-md space-y-4 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="primary" className="bg-[#F95700] text-white">
+                    ⭐ Shared Task
+                  </Badge>
+                  <Badge variant={featuredSharedTask.task_type === 'new_user' ? 'primary' : 'secondary'}>
+                    {featuredSharedTask.task_type === 'new_user' ? 'New Temu User' : 'Existing Temu User'}
+                  </Badge>
+                  {featuredSharedTask.is_premium && (
+                    <Badge variant="premium">URGENT</Badge>
+                  )}
+                </div>
+                <h2 className="text-xl font-extrabold text-[#111827]">
+                  {featuredSharedTask.title}
+                </h2>
+                <p className="text-xs text-[#6B7280]">
+                  You were invited to complete this task. Enter your Temu account info and accept the invitation to earn cash rewards directly to your wallet!
+                </p>
+              </div>
+
+              <div className="sm:text-right shrink-0 bg-white sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-[#E5E7EB]">
+                <span className="text-[11px] text-[#6B7280] block font-medium">Participant Reward</span>
+                <span className="text-2xl font-black text-[#10B981]">
+                  {formatNaira(BigInt(featuredSharedTask.reward_per_participant_kobo || 0))}
+                </span>
+                <span className="text-xs text-[#6B7280] block mt-0.5">
+                  {Math.max(0, featuredSharedTask.quantity_requested - featuredSharedTask.quantity_approved)} slots remaining
+                </span>
+              </div>
+            </div>
+
+            {/* Action Area */}
+            <div className="pt-3 border-t border-[#F95700]/20 flex flex-wrap items-center justify-between gap-3">
+              {!user ? (
+                <Button
+                  size="md"
+                  variant="primary"
+                  className="w-full sm:w-auto"
+                  onClick={() => signInWithGoogle(`/tasks?taskId=${featuredSharedTask.id}`)}
+                >
+                  Sign In with Google to Complete &amp; Earn {formatNaira(BigInt(featuredSharedTask.reward_per_participant_kobo || 0))}
+                </Button>
+              ) : user.id === featuredSharedTask.user_id ? (
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs font-semibold text-[#6B7280]">You created this task.</span>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setShareTask(featuredSharedTask)}
+                    leftIcon={<Share2 className="w-3.5 h-3.5" />}
+                  >
+                    Share Task Again
+                  </Button>
+                </div>
+              ) : userSubmissions[featuredSharedTask.id] ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#10B981] bg-[#ECFDF5] px-3 py-1.5 rounded-lg border border-[#A7F3D0]">
+                    ✓ Already Submitted ({userSubmissions[featuredSharedTask.id].status.replace('_', ' ')})
+                  </span>
+                </div>
+              ) : featuredSharedTask.quantity_approved >= featuredSharedTask.quantity_requested ? (
+                <span className="text-xs font-bold text-[#EF4444] bg-[#FEF2F2] px-3 py-1.5 rounded-lg border border-[#FECACA]">
+                  This task has reached maximum slots capacity!
+                </span>
+              ) : (
+                <Button
+                  size="md"
+                  variant="primary"
+                  className="w-full sm:w-auto"
+                  onClick={() => handleOpenSingleModal(featuredSharedTask)}
+                >
+                  Accept &amp; Complete Task ({formatNaira(BigInt(featuredSharedTask.reward_per_participant_kobo || 0))})
+                </Button>
+              )}
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShareTask(featuredSharedTask)}
+                leftIcon={<Share2 className="w-3.5 h-3.5" />}
+              >
+                Share Task
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Pro Multi-Task Batch Submission Banner */}
         <div className="bg-[#FFF5F0] border border-[#F95700]/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -399,13 +537,34 @@ export default function AvailableTasksPage() {
 
                   <div className="pt-4 mt-2 border-t border-[#E5E7EB] flex items-center gap-2">
                     {isOwner ? (
-                      <Button size="sm" variant="outline" className="w-full" disabled>
-                        Your Own Task
-                      </Button>
+                      <div className="flex items-center gap-2 w-full">
+                        <Button size="sm" variant="outline" className="flex-1" disabled>
+                          Your Task
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => setShareTask(task)}
+                          leftIcon={<Share2 className="w-3.5 h-3.5" />}
+                        >
+                          Share Task
+                        </Button>
+                      </div>
                     ) : alreadySubmitted ? (
-                      <Button size="sm" variant="secondary" className="w-full" disabled>
-                        Already Submitted ({userSubmissions[task.id].status.replace('_', ' ')})
-                      </Button>
+                      <div className="flex items-center gap-2 w-full">
+                        <Button size="sm" variant="secondary" className="flex-1" disabled>
+                          Submitted ({userSubmissions[task.id].status.replace('_', ' ')})
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShareTask(task)}
+                          className="px-2.5 text-[#6B7280] hover:text-[#F95700]"
+                          title="Share task"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     ) : (
                       <>
                         {isPro && (
@@ -425,6 +584,15 @@ export default function AvailableTasksPage() {
                           onClick={() => handleOpenSingleModal(task)}
                         >
                           Do Task ({formatNaira(reward)})
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShareTask(task)}
+                          className="px-2.5 text-[#6B7280] hover:text-[#F95700]"
+                          title="Share task with friends"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
                         </Button>
                       </>
                     )}
@@ -552,49 +720,69 @@ export default function AvailableTasksPage() {
               )}
 
               {submittedLinks.length === 0 ? (
-                <form onSubmit={handleSubmitTask} className="space-y-4">
-                  <Input
-                    label="Your Temu Profile Name"
-                    placeholder="e.g. JohnD or TemuUser_82"
-                    value={temuUsername}
-                    onChange={(e) => setTemuUsername(e.target.value)}
-                    required
-                  />
-
-                  <Input
-                    label="Your Temu Account Email"
-                    type="email"
-                    placeholder="e.g. john@example.com"
-                    value={temuEmail}
-                    onChange={(e) => setTemuEmail(e.target.value)}
-                    required
-                  />
-
-                  <div className="flex items-center justify-end gap-3 pt-2">
+                !user ? (
+                  <div className="p-4 bg-[#F7F7F8] rounded-xl text-center space-y-3">
+                    <p className="text-xs text-[#6B7280]">
+                      Sign in to submit your Temu account info and receive your payout directly into your wallet!
+                    </p>
                     <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCloseModal}
-                      disabled={isSubmitting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
+                      size="md"
                       variant="primary"
-                      size="sm"
-                      isLoading={isSubmitting}
-                      rightIcon={<ExternalLink className="w-4 h-4" />}
+                      className="w-full"
+                      onClick={() =>
+                        signInWithGoogle(
+                          selectedTask ? `/tasks?taskId=${selectedTask.id}` : '/tasks'
+                        )
+                      }
                     >
-                      {isBatchModalOpen
-                        ? `Submit All ${batchTaskIds.length} Tasks (${formatNaira(
-                            totalBatchRewardKobo
-                          )})`
-                        : 'Submit & Open Temu'}
+                      Sign In with Google to Complete Task
                     </Button>
                   </div>
-                </form>
+                ) : (
+                  <form onSubmit={handleSubmitTask} className="space-y-4">
+                    <Input
+                      label="Your Temu Profile Name"
+                      placeholder="e.g. JohnD or TemuUser_82"
+                      value={temuUsername}
+                      onChange={(e) => setTemuUsername(e.target.value)}
+                      required
+                    />
+
+                    <Input
+                      label="Your Temu Account Email"
+                      type="email"
+                      placeholder="e.g. john@example.com"
+                      value={temuEmail}
+                      onChange={(e) => setTemuEmail(e.target.value)}
+                      required
+                    />
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCloseModal}
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="sm"
+                        isLoading={isSubmitting}
+                        rightIcon={<ExternalLink className="w-4 h-4" />}
+                      >
+                        {isBatchModalOpen
+                          ? `Submit All ${batchTaskIds.length} Tasks (${formatNaira(
+                              totalBatchRewardKobo
+                            )})`
+                          : 'Submit & Open Temu'}
+                      </Button>
+                    </div>
+                  </form>
+                )
               ) : (
                 <div className="flex justify-end pt-2">
                   <Button size="sm" variant="primary" onClick={handleCloseModal}>
@@ -605,6 +793,14 @@ export default function AvailableTasksPage() {
             </Card>
           </div>
         )}
+
+        {/* Share Task Modal */}
+        <ShareTaskModal
+          isOpen={!!shareTask}
+          onClose={() => setShareTask(null)}
+          task={shareTask}
+          referralCode={profile?.referral_code}
+        />
       </div>
     </AppShell>
   );

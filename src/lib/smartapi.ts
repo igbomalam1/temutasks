@@ -48,8 +48,9 @@ export async function purchaseAirtime(params: AirtimePurchaseParams): Promise<Ai
   formData.append('pin', pin);
   formData.append('plan_id', planId.toString());
   formData.append('amount', params.amount.toString());
-  formData.append('phone', cleanPhone);
-  formData.append('reference', params.reference || '');
+  // Sabuss strictly forbids hyphens in references
+  const cleanRef = (params.reference || `AIR${Date.now()}`).replace(/[^a-zA-Z0-9]/g, '');
+  formData.append('reference', cleanRef);
 
   try {
     console.log(`[SmartAPI] Sending airtime request: Network=${params.network}, Plan=${planId}, Amount=${params.amount}, Phone=${cleanPhone}, PIN=${pin}`);

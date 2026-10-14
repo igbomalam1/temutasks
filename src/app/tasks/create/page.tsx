@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   TrendingUp,
 } from 'lucide-react';
+import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
 
 export default function CreateTaskPage() {
   const [taskType, setTaskType] = useState<'existing_user' | 'new_user'>('existing_user');
@@ -26,6 +27,18 @@ export default function CreateTaskPage() {
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: StatusModalType;
+    title: string;
+    message?: string;
+  }>({
+    isOpen: false,
+    type: null,
+    title: '',
+    message: '',
+  });
 
   const minPrice = taskType === 'existing_user' ? 55 : 250;
 
@@ -80,6 +93,12 @@ export default function CreateTaskPage() {
 
     setIsSubmitting(true);
     setErrorMsg('');
+    setModalState({
+      isOpen: true,
+      type: 'loading',
+      title: 'Preparing Your Task...',
+      message: 'Setting up secure checkout to fund and publish your task...',
+    });
 
     try {
       const res = await fetch('/api/tasks/initiate', {
@@ -100,7 +119,14 @@ export default function CreateTaskPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || 'Failed to initiate task payment');
+        const errorText = data.error || 'Failed to initiate task payment';
+        setErrorMsg(errorText);
+        setModalState({
+          isOpen: true,
+          type: 'error',
+          title: 'Setup Failed',
+          message: errorText,
+        });
         setIsSubmitting(false);
         return;
       }
@@ -108,11 +134,25 @@ export default function CreateTaskPage() {
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
       } else {
-        setErrorMsg('No checkout URL returned from payment provider.');
+        const errorText = 'No checkout URL returned from payment provider.';
+        setErrorMsg(errorText);
+        setModalState({
+          isOpen: true,
+          type: 'error',
+          title: 'Checkout Error',
+          message: errorText,
+        });
         setIsSubmitting(false);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Payment initiation error');
+      const errorText = err.message || 'Payment initiation error';
+      setErrorMsg(errorText);
+      setModalState({
+        isOpen: true,
+        type: 'error',
+        title: 'Connection Error',
+        message: errorText,
+      });
       setIsSubmitting(false);
     }
   };
@@ -345,6 +385,17 @@ export default function CreateTaskPage() {
             </Button>
           </Card>
         </form>
+
+        {/* Status Modal Popup */}
+        <StatusModal
+          isOpen={modalState.isOpen}
+          type={modalState.type}
+          title={modalState.title}
+          message={modalState.message}
+          actionText="Close"
+          onAction={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+          onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        />
       </div>
     </AppShell>
   );

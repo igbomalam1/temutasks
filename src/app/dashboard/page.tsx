@@ -12,6 +12,7 @@ import {
   Wallet,
   Smartphone,
   ArrowUpRight,
+  ArrowDownLeft,
   PlusCircle,
   CheckCircle2,
   ListTodo,
@@ -186,69 +187,80 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* Quick Action Navigation Buttons (Footer Bar Style: Button Icon + Button Name) */}
-        <div className="grid grid-cols-5 gap-2 sm:gap-3">
-          {/* Create Tasks */}
+        {/* Quick Action Navigation Buttons (3 on a line, Footer-Bar Style: Button Icon + Button Name) */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+          {/* Row 1, Button 1: Create Tasks */}
           <Link
             href="/tasks/create"
-            className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+            className="flex flex-col items-center justify-center py-3.5 px-2 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
             <PlusCircle className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
-            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <span className="text-xs sm:text-sm font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Create Tasks
             </span>
           </Link>
 
-          {/* Earn Rewards */}
+          {/* Row 1, Button 2: Earn Rewards */}
           <Link
             href="/tasks"
-            className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+            className="flex flex-col items-center justify-center py-3.5 px-2 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
             <Sparkles className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
-            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <span className="text-xs sm:text-sm font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Earn Rewards
             </span>
           </Link>
 
-          {/* Tasks (active tasks) */}
+          {/* Row 1, Button 3: Deposit (Novac Wallet Top-Up) */}
+          <Link
+            href="/wallet/deposit"
+            className="flex flex-col items-center justify-center py-3.5 px-2 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+          >
+            <ArrowDownLeft className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
+            <span className="text-xs sm:text-sm font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
+              Deposit
+            </span>
+          </Link>
+
+          {/* Row 2, Button 4: Tasks (Active tasks) */}
           <Link
             href="/my-tasks"
-            className="relative flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+            className="relative flex flex-col items-center justify-center py-3.5 px-2 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
             {activeTasksCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 sm:right-3 px-1.5 py-0.2 text-[9px] font-extrabold bg-[#F95700] text-white rounded-full min-w-[16px] text-center shadow-xs">
+              <span className="absolute top-2 right-2 sm:right-4 px-1.5 py-0.2 text-[9px] font-extrabold bg-[#F95700] text-white rounded-full min-w-[16px] text-center shadow-xs">
                 {activeTasksCount}
               </span>
             )}
             <ListTodo className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
-            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <span className="text-xs sm:text-sm font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Tasks
             </span>
           </Link>
 
-          {/* Review (pending reviews) */}
+          {/* Row 2, Button 5: Review (Pending reviews) */}
           <Link
             href="/my-tasks"
-            className="relative flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+            className="relative flex flex-col items-center justify-center py-3.5 px-2 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
             {pendingReviewsCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 sm:right-3 px-1.5 py-0.2 text-[9px] font-extrabold bg-[#F59E0B] text-white rounded-full min-w-[16px] text-center shadow-xs">
+              <span className="absolute top-2 right-2 sm:right-4 px-1.5 py-0.2 text-[9px] font-extrabold bg-[#F59E0B] text-white rounded-full min-w-[16px] text-center shadow-xs">
                 {pendingReviewsCount}
               </span>
             )}
             <Clock className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
-            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <span className="text-xs sm:text-sm font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Review
             </span>
           </Link>
 
-          {/* Referrals */}
+          {/* Row 2, Button 6: Referrals */}
           <Link
             href="/referrals"
-            className="flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
+            className="flex flex-col items-center justify-center py-3.5 px-2 rounded-xl bg-white border border-[#E5E7EB] hover:border-[#F95700] hover:bg-[#FFF5F0] transition-all text-center shadow-xs group"
           >
             <Users className="w-5 h-5 mb-1.5 text-[#6B7280] group-hover:text-[#F95700] transition-colors" />
-            <span className="text-[10px] sm:text-xs font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
+            <span className="text-xs sm:text-sm font-semibold text-[#4B5563] group-hover:text-[#F95700] truncate w-full transition-colors">
               Referrals
             </span>
           </Link>

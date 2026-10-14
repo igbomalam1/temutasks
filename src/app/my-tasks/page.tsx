@@ -20,14 +20,17 @@ import {
   ChevronUp,
   AlertCircle,
   PlusCircle,
+  Share2,
 } from 'lucide-react';
+import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
 
 export default function MyTasksPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [shareTask, setShareTask] = useState<any | null>(null);
 
   // Decline dialog state
   const [declineSubId, setDeclineSubId] = useState<string | null>(null);
@@ -82,6 +85,19 @@ export default function MyTasksPage() {
   useEffect(() => {
     loadMyTasks();
   }, [user]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const msg = params.get('msg');
+      const err = params.get('error');
+      if (msg) {
+        setActionMsg({ text: msg, type: 'success' });
+      } else if (err) {
+        setActionMsg({ text: err, type: 'error' });
+      }
+    }
+  }, []);
 
   const handleApprove = async (submissionId: string) => {
     setIsProcessing(true);
@@ -235,12 +251,21 @@ export default function MyTasksPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       {pendingCount > 0 && (
                         <span className="text-xs font-bold text-[#F95700] bg-[#FFF5F0] px-2.5 py-1 rounded-full border border-[#F95700]/20">
                           {pendingCount} Pending Review
                         </span>
                       )}
+
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => setShareTask(task)}
+                        leftIcon={<Share2 className="w-3.5 h-3.5" />}
+                      >
+                        Share Task
+                      </Button>
 
                       <Button
                         size="sm"
@@ -250,7 +275,7 @@ export default function MyTasksPage() {
                           isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
                         }
                       >
-                        {isExpanded ? 'Hide Submissions' : `View Submissions (${taskSubs.length})`}
+                        {isExpanded ? 'Hide' : `Submissions (${taskSubs.length})`}
                       </Button>
                     </div>
                   </div>
@@ -393,6 +418,14 @@ export default function MyTasksPage() {
             </Card>
           </div>
         )}
+
+        {/* Share Task Modal */}
+        <ShareTaskModal
+          isOpen={!!shareTask}
+          onClose={() => setShareTask(null)}
+          task={shareTask}
+          referralCode={profile?.referral_code}
+        />
       </div>
     </AppShell>
   );

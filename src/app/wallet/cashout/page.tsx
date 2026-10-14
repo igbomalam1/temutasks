@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { formatNaira, formatNairaPlain } from '@/lib/utils';
 import Link from 'next/link';
 import { ArrowUpRight, ArrowLeft, CheckCircle2, AlertCircle, Building2 } from 'lucide-react';
+import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
 
 export default function CashOutPage() {
   const { user, wallet, refreshProfile, signInWithGoogle } = useAuth();
@@ -21,6 +22,18 @@ export default function CashOutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: StatusModalType;
+    title: string;
+    message?: string;
+  }>({
+    isOpen: false,
+    type: null,
+    title: '',
+    message: '',
+  });
 
   const balance = BigInt(wallet?.balance_kobo || 0);
   const requestedKobo = BigInt(amount || 0) * BigInt(100);
@@ -63,6 +76,12 @@ export default function CashOutPage() {
     }
 
     setIsLoading(true);
+    setModalState({
+      isOpen: true,
+      type: 'loading',
+      title: 'Processing Withdrawal...',
+      message: `Initiating ₦${amount} transfer to ${destination.toUpperCase()} (${accountNumber}). Please wait...`,
+    });
 
     try {
       const res = await fetch('/api/wallet/withdraw', {
@@ -79,17 +98,36 @@ export default function CashOutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || 'Failed to submit withdrawal request');
+        const errorText = data.error || 'Failed to submit withdrawal request';
+        setErrorMsg(errorText);
+        setModalState({
+          isOpen: true,
+          type: 'error',
+          title: 'Withdrawal Failed',
+          message: errorText,
+        });
       } else {
-        setSuccessMsg(
-          `Withdrawal request submitted! ₦${amount} has been reserved from your wallet and placed into the admin queue. Ref: ${data.reference}`
-        );
+        const successText = `Withdrawal request submitted! ₦${amount} has been reserved from your wallet and placed into the admin queue. Ref: ${data.reference}`;
+        setSuccessMsg(successText);
+        setModalState({
+          isOpen: true,
+          type: 'success',
+          title: 'Withdrawal Submitted! 💸',
+          message: `Your withdrawal of ₦${amount} to ${accountName} (${destination.toUpperCase()} - ${accountNumber}) is placed in queue. Ref: ${data.reference}`,
+        });
         setAccountNumber('');
         setAccountName('');
         await refreshProfile();
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error processing withdrawal');
+      const errorText = err.message || 'Error processing withdrawal';
+      setErrorMsg(errorText);
+      setModalState({
+        isOpen: true,
+        type: 'error',
+        title: 'Connection Error',
+        message: errorText,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -194,6 +232,23 @@ export default function CashOutPage() {
             </Button>
           </form>
         </Card>
+
+        {/* Status Modal Popup */}
+        <StatusModal
+          isOpen={modalState.isOpen}
+          type={modalState.type}
+          title={modalState.title}
+          message={modalState.message}
+          actionText={modalState.type === 'success' ? 'Back to Wallet' : 'Close'}
+          onAction={() => {
+            if (modalState.type === 'success') {
+              window.location.href = '/wallet';
+            } else {
+              setModalState((prev) => ({ ...prev, isOpen: false }));
+            }
+          }}
+          onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        />
       </div>
     </AppShell>
   );

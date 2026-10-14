@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic';
 import { createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { verifyNovacPayment } from '@/lib/novac';
+import { executeWalletTransaction } from '@/lib/wallet';
 import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
 
 export async function GET(request: Request) {
@@ -181,6 +183,53 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(`${appUrl}/dashboard?msg=Upgraded+to+TemuTasks+Pro`);
+  } else if (order.order_type === 'wallet_deposit') {
+    const amountKobo = BigInt(order.amount_kobo);
+    const amountNaira = Number(amountKobo) / 100;
+
+    // Credit user wallet atomically with immutable ledger record
+    await executeWalletTransaction({
+      userId: order.user_id,
+      amountKobo,
+      direction: 'credit',
+      transactionType: 'wallet_deposit',
+      description: `Wallet deposit via Novac (${reference})`,
+      relatedId: reference,
+      idempotencyKey: `DEP-${reference}`,
+    });
+
+    // In-app notification
+    await supabase.from('temutask_notifications').insert({
+      user_id: order.user_id,
+      title: 'Wallet Deposit Credited 💰',
+      message: `₦${amountNaira.toLocaleString()} has been added to your wallet balance. Reference: ${reference}.`,
+      type: 'wallet_deposit',
+      link: '/wallet',
+    });
+
+    // Send confirmation email
+    const userEmail = order.temutask_profiles?.email;
+    if (userEmail) {
+      const emailHtml = renderEmailTemplate({
+        title: 'Wallet Deposit Confirmed 💰',
+        contentHtml: `<p>Your payment via Novac was confirmed and your TemuTasks wallet has been credited:</p>
+        <p><strong>Amount Credited:</strong> ₦${amountNaira.toLocaleString()}.00<br>
+        <strong>Payment Gateway:</strong> Novac<br>
+        <strong>Reference:</strong> ${reference}</p>
+        <p>Your new balance is available immediately for airtime top-up, creating tasks, or upgrading to Pro.</p>`,
+        ctaText: 'View Wallet Balance',
+        ctaUrl: `${appUrl}/wallet`,
+      });
+
+      sendEmail({
+        to: userEmail,
+        subject: `[TemuTasks] Wallet Credited: ₦${amountNaira.toLocaleString()} (Deposit)`,
+        html: emailHtml,
+        eventType: 'wallet_deposit_confirmation',
+      }).catch((e) => console.error('Sendbyte deposit email error:', e));
+    }
+
+    return NextResponse.redirect(`${appUrl}/wallet?msg=Deposit+of+₦${amountNaira.toLocaleString()}+successful`);
   }
 
   return NextResponse.redirect(`${appUrl}/dashboard`);

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { formatNaira, formatNairaPlain } from '@/lib/utils';
 import Link from 'next/link';
 import { Smartphone, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
 
 export default function AirtimePage() {
   const { user, wallet, refreshProfile, signInWithGoogle } = useAuth();
@@ -20,6 +21,18 @@ export default function AirtimePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: StatusModalType;
+    title: string;
+    message?: string;
+  }>({
+    isOpen: false,
+    type: null,
+    title: '',
+    message: '',
+  });
 
   const balance = BigInt(wallet?.balance_kobo || 0);
   const costKobo = BigInt(amount || 0) * BigInt(100);
@@ -58,6 +71,12 @@ export default function AirtimePage() {
     }
 
     setIsLoading(true);
+    setModalState({
+      isOpen: true,
+      type: 'loading',
+      title: 'Processing Airtime Recharge...',
+      message: `Connecting to ${network} and sending ₦${amount} to ${phone.trim()}. Please wait a moment...`,
+    });
 
     try {
       const res = await fetch('/api/wallet/airtime', {
@@ -73,16 +92,35 @@ export default function AirtimePage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || 'Failed to complete airtime recharge');
+        const errorText = data.error || 'Failed to complete airtime recharge';
+        setErrorMsg(errorText);
+        setModalState({
+          isOpen: true,
+          type: 'error',
+          title: 'Recharge Failed',
+          message: errorText,
+        });
       } else {
-        setSuccessMsg(
-          `Success! ₦${amount} ${network} airtime recharge has been sent to ${phone}. Ref: ${data.reference}`
-        );
+        const successText = `Success! ₦${amount} ${network} airtime recharge has been sent to ${phone}. Ref: ${data.reference}`;
+        setSuccessMsg(successText);
+        setModalState({
+          isOpen: true,
+          type: 'success',
+          title: 'Airtime Recharged Successfully! 📱',
+          message: `₦${amount} ${network} airtime has been delivered to ${phone}. Transaction Ref: ${data.reference}`,
+        });
         setPhone('');
         await refreshProfile();
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Connection error processing airtime');
+      const errorText = err.message || 'Connection error processing airtime';
+      setErrorMsg(errorText);
+      setModalState({
+        isOpen: true,
+        type: 'error',
+        title: 'Connection Error',
+        message: errorText,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -192,6 +230,29 @@ export default function AirtimePage() {
             </Button>
           </form>
         </Card>
+
+        {/* Status Modal Popup */}
+        <StatusModal
+          isOpen={modalState.isOpen}
+          type={modalState.type}
+          title={modalState.title}
+          message={modalState.message}
+          actionText={modalState.type === 'success' ? 'Back to Wallet' : 'Close'}
+          onAction={() => {
+            if (modalState.type === 'success') {
+              window.location.href = '/wallet';
+            } else {
+              setModalState((prev) => ({ ...prev, isOpen: false }));
+            }
+          }}
+          secondaryText={modalState.type === 'success' ? 'Recharge Another' : undefined}
+          onSecondary={
+            modalState.type === 'success'
+              ? () => setModalState((prev) => ({ ...prev, isOpen: false }))
+              : undefined
+          }
+          onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        />
       </div>
     </AppShell>
   );
