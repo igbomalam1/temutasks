@@ -104,12 +104,16 @@ export async function POST(request: Request) {
           ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/dashboard`,
         });
 
-        sendEmail({
-          to: user.email,
-          subject: `[TemuTasks Pro] Welcome to Pro Membership! ⭐`,
-          html: proEmailHtml,
-          eventType: 'pro_upgrade_wallet',
-        }).catch((e) => console.error('Error sending pro confirmation email:', e));
+        try {
+          await sendEmail({
+            to: user.email,
+            subject: `[TemuTasks Pro] Welcome to Pro Membership! ⭐`,
+            html: proEmailHtml,
+            eventType: 'pro_upgrade_wallet',
+          });
+        } catch (e) {
+          console.error('Error sending pro confirmation email:', e);
+        }
       }
 
       return NextResponse.json({ success: true, expiresAt: newExpiresAt.toISOString() });

@@ -273,27 +273,22 @@ export default function AvailableTasksPage() {
     setErrorMsg('');
 
     try {
-      // 1. Upload screenshot to Supabase Storage bucket 'temutask-proofs'
-      const ext = proofFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const cleanUserId = (user?.id || 'anon').replace(/[^a-zA-Z0-9]/g, '');
-      const filePath = `submissions/${cleanUserId}-${Date.now()}.${ext}`;
+      // 1. Upload screenshot via server endpoint to bypass client-side storage RLS
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', proofFile);
+      uploadFormData.append('folder', 'submissions');
 
-      const { error: uploadError } = await supabase.storage
-        .from('temutask-proofs')
-        .upload(filePath, proofFile, {
-          cacheControl: '3600',
-          upsert: true,
-        });
+      const uploadRes = await fetch('/api/tasks/upload-proof', {
+        method: 'POST',
+        body: uploadFormData,
+      });
 
-      if (uploadError) {
-        throw new Error(`Failed to upload proof screenshot: ${uploadError.message}`);
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.proofUrl) {
+        throw new Error(uploadData.error || 'Failed to upload proof screenshot.');
       }
 
-      const { data: urlData } = supabase.storage
-        .from('temutask-proofs')
-        .getPublicUrl(filePath);
-      const proofUrl = urlData?.publicUrl || '';
-
+      const proofUrl = uploadData.proofUrl;
       setIsUploadingProof(false);
 
       const payload = isBatchModalOpen

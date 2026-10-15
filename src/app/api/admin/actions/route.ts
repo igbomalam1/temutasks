@@ -203,6 +203,12 @@ export async function POST(request: Request) {
         status: 'active',
       });
 
+      // Enable task alerts preference
+      await adminSupabase.from('temutask_notification_preferences').upsert({
+        user_id: userId,
+        email_task_alerts: true,
+      });
+
       // Notify user in-app
       await adminSupabase.from('temutask_notifications').insert({
         user_id: userId,
@@ -231,12 +237,16 @@ export async function POST(request: Request) {
           ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/dashboard`,
         });
 
-        sendEmail({
-          to: targetUser.email,
-          subject: `[TemuTasks Pro] Your Account Has Been Upgraded! ⭐`,
-          html: proEmailHtml,
-          eventType: 'pro_upgrade_confirmation',
-        }).catch((e) => console.error('Error emailing upgraded pro user:', e));
+        try {
+          await sendEmail({
+            to: targetUser.email,
+            subject: `[TemuTasks Pro] Your Account Has Been Upgraded! ⭐`,
+            html: proEmailHtml,
+            eventType: 'pro_upgrade_confirmation',
+          });
+        } catch (e) {
+          console.error('Error emailing upgraded pro user:', e);
+        }
       }
 
       // Audit log

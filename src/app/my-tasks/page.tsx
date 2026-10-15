@@ -369,26 +369,22 @@ export default function MyTasksPage() {
     setActionMsg(null);
 
     try {
-      // 1. Upload proof screenshot to Supabase Storage bucket
-      const ext = declineFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const cleanSubId = declineSubId.replace(/[^a-zA-Z0-9]/g, '');
-      const filePath = `rejections/${cleanSubId}-${Date.now()}.${ext}`;
+      // 1. Upload proof screenshot via server endpoint to bypass storage RLS
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', declineFile);
+      uploadFormData.append('folder', 'rejections');
 
-      const { error: uploadError } = await supabase.storage
-        .from('temutask-proofs')
-        .upload(filePath, declineFile, {
-          cacheControl: '3600',
-          upsert: true,
-        });
+      const uploadRes = await fetch('/api/tasks/upload-proof', {
+        method: 'POST',
+        body: uploadFormData,
+      });
 
-      if (uploadError) {
-        throw new Error(`Failed to upload proof image: ${uploadError.message}`);
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.proofUrl) {
+        throw new Error(uploadData.error || 'Failed to upload proof image.');
       }
 
-      const { data: urlData } = supabase.storage
-        .from('temutask-proofs')
-        .getPublicUrl(filePath);
-      const proofUrl = urlData?.publicUrl || '';
+      const proofUrl = uploadData.proofUrl;
 
       // 2. Call review API with structured reason and proofUrl
       const res = await fetch('/api/tasks/review', {

@@ -148,19 +148,25 @@ export async function GET(request: Request) {
         ctaUrl: `${appUrl}/my-tasks`,
       });
 
-      sendEmail({
-        to: userEmail,
-        subject: `[TemuTasks] ${isCombined ? 'Combined Tasks' : 'Task'} Published Live!`,
-        html: emailHtml,
-        eventType: 'task_published',
-      }).catch((e) => console.error('Sendbyte email error:', e));
+      try {
+        await sendEmail({
+          to: userEmail,
+          subject: `[TemuTasks] ${isCombined ? 'Combined Tasks' : 'Task'} Published Live!`,
+          html: emailHtml,
+          eventType: 'task_published',
+        });
+      } catch (e) {
+        console.error('Sendbyte email error:', e);
+      }
     }
 
     // Pro Member Task Alert: Send email alert to active opted-in Pro users
     for (const ct of createdTasks) {
-      notifyProMembersAboutNewTask(ct, appUrl).catch((e) =>
-        console.error('Error alerting Pro members:', e)
-      );
+      try {
+        await notifyProMembersAboutNewTask(ct, appUrl);
+      } catch (e) {
+        console.error('Error alerting Pro members:', e);
+      }
     }
 
     return NextResponse.redirect(`${appUrl}/my-tasks?msg=Task+published+successfully`);
@@ -297,38 +303,66 @@ export async function GET(request: Request) {
   return NextResponse.redirect(`${appUrl}/dashboard`);
 }
 
-// Background helper to notify active, opted-in Pro members
+// Helper to notify active, opted-in Pro members
 async function notifyProMembersAboutNewTask(task: any, appUrl: string) {
   const supabase = createAdminClient();
 
-  // Find active Pro users with task alert notifications enabled
-  const { data: proUsers } = await supabase
+  // Find active Pro users
+  const { data: proUsers, error } = await supabase
     .from('temutask_profiles')
-    .select('id, email, full_name, pro_expires_at')
-    .eq('tier', 'pro')
-    .gt('pro_expires_at', new Date().toISOString());
+    .select('id, email, full_name, pro_expires_at, status')
+    .eq('tier', 'pro');
 
-  if (!proUsers || proUsers.length === 0) return;
+  if (error || !proUsers || proUsers.length === 0) return;
 
-  for (const user of proUsers) {
-    if (user.id === task.user_id) continue; // Don't notify task owner
+  const now = new Date();
+  const activeProUsers = proUsers.filter((u: any) => {
+    if (u.status === 'suspended') return false;
+    if (!u.email) return false;
+    if (!u.pro_expires_at) return true;
+    return new Date(u.pro_expires_at) > now;
+  });
+
+  if (activeProUsers.length === 0) return;
+
+  const { data: prefs } = await supabase
+    .from('temutask_notification_preferences')
+    .select('user_id, email_task_alerts')
+    .in('user_id', activeProUsers.map((u: any) => u.id));
+
+  const prefMap = new Map((prefs || []).map((p: any) => [p.user_id, p.email_task_alerts]));
+
+  const rewardNaira = (Number(task.reward_per_participant_kobo || 0) / 100).toLocaleString();
+  const taskTitle = task.title ? task.title.split('|||')[0].trim() : 'Temu Task';
+
+  const sendPromises = activeProUsers.map(async (user: any) => {
+    if (prefMap.get(user.id) === false) return;
 
     const emailHtml = renderEmailTemplate({
       title: 'New Temu Task Available! ⚡',
-      contentHtml: `<p>A new task matching your eligibility has just been published on TemuTasks:</p>
-      <p><strong>Title:</strong> ${task.title}<br>
-      <strong>Reward:</strong> ${task.task_type === 'new_user' ? '₦200.00' : '₦45.00'}<br>
-      <strong>Available Slots:</strong> ${task.quantity_requested}</p>
-      <p>Hurry and claim your slot before it reaches full capacity!</p>`,
+      contentHtml: `<p>A new task matching your Pro eligibility has just been published on TemuTasks:</p>
+      <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; margin: 16px 0;">
+        <p style="margin: 4px 0;"><strong>Title:</strong> ${taskTitle}</p>
+        <p style="margin: 4px 0;"><strong>Reward:</strong> ₦${rewardNaira}</p>
+        <p style="margin: 4px 0;"><strong>Available Slots:</strong> ${task.quantity_requested}</p>
+        <p style="margin: 4px 0;"><strong>Type:</strong> ${task.task_type === 'new_user' ? 'New User Invitation' : 'Existing User Invitation'}</p>
+      </div>
+      <p>As a <strong>Pro Member</strong>, you get instant email alerts so you can claim slots before they are filled.</p>`,
       ctaText: 'Do Task Now',
       ctaUrl: `${appUrl}/tasks`,
     });
 
-    await sendEmail({
-      to: user.email,
-      subject: `[TemuTasks Pro Alert] New task: "${task.title}"`,
-      html: emailHtml,
-      eventType: 'pro_task_alert',
-    });
-  }
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: `[TemuTasks Pro Alert] ⚡ New Task: "${taskTitle}" (₦${rewardNaira})`,
+        html: emailHtml,
+        eventType: 'pro_task_alert',
+      });
+    } catch (e) {
+      console.error(`Failed to dispatch Pro alert to ${user.email}:`, e);
+    }
+  });
+
+  await Promise.allSettled(sendPromises);
 }
