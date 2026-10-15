@@ -71,8 +71,9 @@ CREATE TABLE IF NOT EXISTS public.temutask_tasks (
     base_cost_kobo BIGINT NOT NULL,
     platform_fee_kobo BIGINT NOT NULL DEFAULT 20000, -- ₦200 in kobo
     premium_fee_kobo BIGINT NOT NULL DEFAULT 0,
-    total_cost_kobo BIGINT NOT NULL,
     is_premium BOOLEAN NOT NULL DEFAULT false,
+    duration_hours INT NOT NULL DEFAULT 24,
+    expires_at TIMESTAMPTZ,
     status TEXT NOT NULL DEFAULT 'pending_payment' CHECK (status IN ('pending_payment', 'active', 'completed', 'paused', 'suspended', 'cancelled')),
     payment_reference TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS public.temutask_submissions (
     status TEXT NOT NULL DEFAULT 'pending_review' CHECK (status IN ('pending_review', 'approved', 'declined_disputed', 'rejected', 'auto_approved')),
     decline_reason TEXT,
     rejection_proof_url TEXT,
+    proof_url TEXT, -- Public URL of participant task completion screenshot
     reviewed_by UUID REFERENCES public.temutask_profiles(id) ON DELETE SET NULL,
     reviewed_at TIMESTAMPTZ,
     reward_kobo BIGINT NOT NULL,

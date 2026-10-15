@@ -5,6 +5,9 @@ import { Clock } from 'lucide-react';
 
 interface TaskCountdownTimerProps {
   createdAt: string;
+  expiresAt?: string;
+  durationHours?: number;
+  status?: string;
   className?: string;
   variant?: 'badge' | 'compact' | 'pill';
   showIcon?: boolean;
@@ -12,6 +15,9 @@ interface TaskCountdownTimerProps {
 
 export const TaskCountdownTimer: React.FC<TaskCountdownTimerProps> = ({
   createdAt,
+  expiresAt,
+  durationHours,
+  status,
   className = '',
   variant = 'badge',
   showIcon = true,
@@ -25,10 +31,16 @@ export const TaskCountdownTimer: React.FC<TaskCountdownTimerProps> = ({
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const createdTime = new Date(createdAt).getTime();
-      // 24 hours in milliseconds = 24 * 60 * 60 * 1000 = 86,400,000 ms
-      const expiresAt = createdTime + 24 * 60 * 60 * 1000;
-      const difference = expiresAt - Date.now();
+      let expiryMs: number;
+      if (expiresAt) {
+        expiryMs = new Date(expiresAt).getTime();
+      } else {
+        const createdMs = new Date(createdAt).getTime();
+        const hours = durationHours && durationHours > 0 ? durationHours : 24;
+        expiryMs = createdMs + hours * 60 * 60 * 1000;
+      }
+
+      const difference = expiryMs - Date.now();
 
       if (difference <= 0) {
         return { hours: 0, minutes: 0, seconds: 0, isExpired: true };
@@ -48,10 +60,34 @@ export const TaskCountdownTimer: React.FC<TaskCountdownTimerProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [createdAt]);
+  }, [createdAt, expiresAt, durationHours]);
 
   const { hours, minutes, seconds, isExpired } = timeLeft;
   const pad = (n: number) => n.toString().padStart(2, '0');
+
+  if (status === 'cancelled') {
+    return (
+      <span
+        title="This task was ended by its creator"
+        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB] ${className}`}
+      >
+        {showIcon && <Clock className="w-3 h-3 text-[#9CA3AF] shrink-0" />}
+        <span>Task Ended</span>
+      </span>
+    );
+  }
+
+  if (status === 'completed') {
+    return (
+      <span
+        title="This task has reached its target participants"
+        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0] ${className}`}
+      >
+        {showIcon && <Clock className="w-3 h-3 text-[#059669] shrink-0" />}
+        <span>Completed</span>
+      </span>
+    );
+  }
 
   if (isExpired) {
     return (

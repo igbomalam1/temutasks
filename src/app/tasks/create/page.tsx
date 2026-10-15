@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   HelpCircle,
   RotateCcw,
+  Clock,
 } from 'lucide-react';
 import { StatusModal, StatusModalType } from '@/components/ui/StatusModal';
 
@@ -35,6 +36,8 @@ export default function CreateTaskPage() {
   const [title, setTitle] = useState('');
   const [instructions, setInstructions] = useState(DEFAULT_TASK_INSTRUCTIONS);
   const [isPremium, setIsPremium] = useState(false);
+  const [durationHours, setDurationHours] = useState<number>(24);
+  const [isCustomDuration, setIsCustomDuration] = useState(false);
 
   // Single task states
   const [quantity, setQuantity] = useState<number>(10);
@@ -193,6 +196,7 @@ export default function CreateTaskPage() {
         title: title.trim(),
         instructions: instructions.trim(),
         isPremium,
+        durationHours,
         paymentMethod,
       };
 
@@ -593,7 +597,77 @@ export default function CreateTaskPage() {
             </div>
           </Card>
 
-          {/* STEP 4: PROMOTION */}
+          {/* STEP 4: TASK DURATION TIMER */}
+          <Card className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-[#111827] uppercase tracking-wider">
+                Step 4: Task Duration &amp; Expiration Timer
+              </label>
+              <Badge variant="primary" className="gap-1 font-mono text-[11px]">
+                <Clock className="w-3 h-3" />
+                {durationHours}h Countdown
+              </Badge>
+            </div>
+
+            <p className="text-xs text-[#6B7280]">
+              Choose how long your task round stays active for participants. Temu invite events typically run for 24 hours. You can also edit or extend this timer anytime from your dashboard.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: '12 Hours', hours: 12, desc: 'Quick sprint' },
+                { label: '24 Hours', hours: 24, desc: 'Temu Standard (Default)', isDefault: true },
+                { label: '48 Hours', hours: 48, desc: 'Extended 2-day' },
+                { label: '72 Hours', hours: 72, desc: 'Weekend round' },
+              ].map((opt) => (
+                <button
+                  key={opt.hours}
+                  type="button"
+                  onClick={() => {
+                    setDurationHours(opt.hours);
+                    setIsCustomDuration(false);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    !isCustomDuration && durationHours === opt.hours
+                      ? 'border-[#F95700] bg-[#FFF5F0] ring-1 ring-[#F95700]'
+                      : 'border-[#E5E7EB] hover:border-[#D1D5DB] bg-white'
+                  }`}
+                >
+                  <span className="block text-xs font-bold text-[#111827]">
+                    {opt.label}
+                  </span>
+                  <span className="text-[10px] text-[#6B7280] block mt-0.5">
+                    {opt.desc}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsCustomDuration(!isCustomDuration)}
+                className="text-xs font-semibold text-[#F95700] hover:underline flex items-center gap-1"
+              >
+                {isCustomDuration ? '← Back to standard presets' : '+ Set custom duration hours'}
+              </button>
+              {isCustomDuration && (
+                <div className="flex items-center gap-2 flex-1 max-w-xs">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="168"
+                    value={durationHours.toString()}
+                    onChange={(e) => setDurationHours(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    placeholder="e.g. 36"
+                  />
+                  <span className="text-xs text-[#6B7280] font-medium shrink-0">Hours active</span>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* STEP 5: PROMOTION */}
           <Card className="space-y-3">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
@@ -616,11 +690,11 @@ export default function CreateTaskPage() {
             </div>
           </Card>
 
-          {/* STEP 5: PAYMENT METHOD SELECTOR */}
+          {/* STEP 6: PAYMENT METHOD SELECTOR */}
           <Card className="space-y-4">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-[#111827] uppercase tracking-wider">
-                Step 5: Select Payment Method
+                Step 6: Select Payment Method
               </label>
               <div className="text-xs text-[#6B7280]">
                 Wallet Balance: <strong className="text-[#111827]">{formatNaira(walletBalanceKobo)}</strong>

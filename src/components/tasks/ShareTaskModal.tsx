@@ -46,7 +46,11 @@ export function ShareTaskModal({
   const shareUrl = `${origin}/tasks?taskId=${task.id}${referralCode ? `&ref=${referralCode}` : ''}`;
   const rewardFormatted = formatNaira(BigInt(task.reward_per_participant_kobo || 0));
 
-  const shareText = `🎉 Get ₦25 instant welcome bonus as soon as you register on TemuTasks! Plus accept my Temu invitation task to earn an additional ${rewardFormatted}! Anyone can complete this quick task and cash out or buy airtime immediately: ${shareUrl}`;
+  const shareText = `🔥 New task available now for ${rewardFormatted}!
+
+⚡ Complete now and claim your reward as airtime or cash withdrawal.
+⏳ Task ends soon, complete task here:
+${shareUrl}`;
 
   const handleCopyLink = async () => {
     try {
@@ -86,8 +90,8 @@ export function ShareTaskModal({
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: `TemuTasks: ${task.title}`,
-          text: `Accept my Temu invitation task and earn ${rewardFormatted}!`,
+          title: `New Task Available for ${rewardFormatted} - TemuTasks`,
+          text: `New task available now for ${rewardFormatted}! Complete now and claim your reward as airtime or cash withdrawal, task ends soon:`,
           url: shareUrl,
         });
       } catch (err: any) {
@@ -142,26 +146,55 @@ export function ShareTaskModal({
 
         {/* Scrollable Body */}
         <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
-          <p className="text-xs text-[#6B7280]">
-            Share your task link with friends or groups. Anyone can click and complete it to help you finish your Temu round!
-          </p>
-
-          {/* Task Summary Badge */}
-          <div className="p-3 sm:p-3.5 bg-[#F7F7F8] border border-[#E5E7EB] rounded-xl flex items-center justify-between">
-            <div className="min-w-0 flex-1 mr-3">
-              <span className="text-[10px] sm:text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider block">
-                Task
-              </span>
-              <h4 className="text-xs sm:text-sm font-bold text-[#111827] truncate">
-                {parseTaskTitleAndInstructions(task.title).title}
+          {/* Social Share Preview Card with OG Image */}
+          <div className="rounded-xl border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] shadow-xs">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/og-image.jpg"
+              alt="TemuTasks Share Banner"
+              className="w-full h-32 sm:h-36 object-cover"
+            />
+            <div className="p-3 space-y-1 bg-white border-t border-[#E5E7EB]">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#F95700] uppercase tracking-wider">
+                  TemuTasks • Daily Rewards
+                </span>
+                <span className="text-[11px] font-black text-[#10B981] bg-[#ECFDF5] px-2 py-0.5 rounded-full border border-[#A7F3D0]">
+                  Reward: {rewardFormatted}
+                </span>
+              </div>
+              <h4 className="text-xs sm:text-sm font-bold text-[#111827]">
+                New task available now for {rewardFormatted}
               </h4>
-              <span className="text-xs text-[#10B981] font-semibold mt-0.5 inline-block">
-                Earn {rewardFormatted} / participant
-              </span>
+              <p className="text-[11px] text-[#6B7280] leading-relaxed">
+                Complete now and claim your reward as airtime or cash withdrawal, task ends soon.
+              </p>
             </div>
-            <Badge variant={task.is_premium ? 'premium' : 'primary'} className="shrink-0">
-              {task.is_premium ? 'URGENT' : 'ACTIVE'}
-            </Badge>
+          </div>
+
+          {/* Formatted Message Preview */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#111827]">Share Message</label>
+              <button
+                type="button"
+                onClick={handleCopyMessage}
+                className="text-[11px] font-bold text-[#F95700] hover:underline flex items-center gap-1"
+              >
+                {copiedMsg ? (
+                  <>
+                    <Check className="w-3 h-3 text-[#10B981]" /> Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" /> Copy Message
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="p-2.5 bg-[#F7F7F8] border border-[#E5E7EB] rounded-xl text-xs text-[#111827] whitespace-pre-line font-medium leading-relaxed">
+              {shareText}
+            </div>
           </div>
 
           {/* Native Share button (if on mobile / supported browser) */}

@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       title,
       instructions: rawInstructions,
       isPremium,
+      durationHours: rawDurationHours,
       paymentMethod = 'novac', // 'wallet' | 'novac'
 
       // Single task parameters
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
       newPrice,
       newLink,
     } = body;
+
+    const durationHours = Math.max(1, Math.min(168, parseInt(rawDurationHours, 10) || 24));
+    const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
 
     const instructions = (rawInstructions || DEFAULT_TASK_INSTRUCTIONS).trim();
     const cleanTitle = (title || '').trim();
@@ -275,6 +279,8 @@ export async function POST(request: Request) {
             premium_fee_kobo: premiumFeeKobo.toString(),
             total_cost_kobo: totalCostKobo.toString(),
             is_premium: !!isPremium,
+            duration_hours: durationHours,
+            expires_at: expiresAt,
             status: 'active', // Immediately live!
             payment_reference: reference,
           })
@@ -364,6 +370,8 @@ export async function POST(request: Request) {
         isCombined,
         instructions,
         isPremium: !!isPremium,
+        durationHours,
+        expiresAt,
         platformFeeKobo: platformFeeKobo.toString(),
         premiumFeeKobo: premiumFeeKobo.toString(),
         totalCostKobo: totalCostKobo.toString(),

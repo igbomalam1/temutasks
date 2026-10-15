@@ -14,11 +14,18 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { taskId, taskIds, temuUsername, temuEmail } = body;
+    const { taskId, taskIds, temuUsername, temuEmail, proofUrl } = body;
 
     if (!temuUsername?.trim() || !temuEmail?.trim()) {
       return NextResponse.json(
         { error: 'Please provide both your Temu username and Temu email.' },
+        { status: 400 }
+      );
+    }
+
+    if (!proofUrl?.trim() || typeof proofUrl !== 'string') {
+      return NextResponse.json(
+        { error: 'Please upload a screenshot from your Temu app proving task completion.' },
         { status: 400 }
       );
     }
@@ -113,20 +120,36 @@ export async function POST(request: Request) {
       const rewardKobo = BigInt(task.reward_per_participant_kobo);
       const commissionKobo = BigInt(task.commission_per_referrer_kobo);
 
-      const { data: newSub, error: subError } = await adminSupabase
+      const insertPayload: any = {
+        task_id: task.id,
+        participant_id: user.id,
+        temu_username: temuUsername.trim(),
+        temu_email: temuEmail.trim(),
+        status: 'pending_review',
+        reward_kobo: rewardKobo.toString(),
+        commission_kobo: commissionKobo.toString(),
+        referrer_id: referrerId,
+        proof_url: proofUrl.trim(),
+      };
+
+      let { data: newSub, error: subError } = await adminSupabase
         .from('temutask_submissions')
-        .insert({
-          task_id: task.id,
-          participant_id: user.id,
-          temu_username: temuUsername.trim(),
-          temu_email: temuEmail.trim(),
-          status: 'pending_review',
-          reward_kobo: rewardKobo.toString(),
-          commission_kobo: commissionKobo.toString(),
-          referrer_id: referrerId,
-        })
+        .insert(insertPayload)
         .select()
         .single();
+
+      // Defensive fallback if proof_url column is not yet migrated in database
+      if (subError && (subError.code === '42703' || subError.message?.includes('proof_url'))) {
+        delete insertPayload.proof_url;
+        insertPayload.decline_reason = `[Proof Screenshot]: ${proofUrl.trim()}`;
+        const retry = await adminSupabase
+          .from('temutask_submissions')
+          .insert(insertPayload)
+          .select()
+          .single();
+        newSub = retry.data;
+        subError = retry.error;
+      }
 
       if (subError || !newSub) {
         skippedReasons.push(`Could not submit "${task.title}": ${subError?.message || 'Error'}`);
@@ -146,7 +169,7 @@ export async function POST(request: Request) {
       await adminSupabase.from('temutask_notifications').insert({
         user_id: task.user_id,
         title: 'New Task Submission for Review',
-        message: `Participant "${temuUsername.trim()}" submitted for your task "${task.title}". Please verify on Temu and approve or decline.`,
+        message: `Participant "${temuUsername.trim()}" submitted for your task "${task.title}" with proof screenshot. Please verify on Temu and approve or decline.`,
         type: 'task_submission',
         link: '/my-tasks',
       });
@@ -159,7 +182,8 @@ export async function POST(request: Request) {
           contentHtml: `<p>A participant has completed and submitted your Temu task:</p>
           <p><strong>Task:</strong> ${task.title}<br>
           <strong>Temu Username:</strong> ${temuUsername.trim()}<br>
-          <strong>Temu Email:</strong> ${temuEmail.trim()}</p>
+          <strong>Temu Email:</strong> ${temuEmail.trim()}<br>
+          <strong>Proof of Completion:</strong> <a href="${proofUrl.trim()}" target="_blank" rel="noopener noreferrer">View Screenshot</a></p>
           <p>Please log in to your TemuTasks dashboard to review and approve the submission.</p>`,
           ctaText: 'Review Submission',
           ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/my-tasks`,

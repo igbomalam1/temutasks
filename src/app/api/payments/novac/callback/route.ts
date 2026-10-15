@@ -101,6 +101,8 @@ export async function GET(request: Request) {
           premium_fee_kobo: payload.premiumFeeKobo,
           total_cost_kobo: payload.totalCostKobo,
           is_premium: !!payload.isPremium,
+          duration_hours: payload.durationHours || 24,
+          expires_at: payload.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           status: 'active', // Published
           payment_reference: reference,
         })

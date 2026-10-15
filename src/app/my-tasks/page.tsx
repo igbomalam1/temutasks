@@ -32,6 +32,7 @@ import {
   Wallet,
   CreditCard,
   ArrowRight,
+  Square,
 } from 'lucide-react';
 import { ShareTaskModal } from '@/components/tasks/ShareTaskModal';
 import { TaskCountdownTimer } from '@/components/tasks/TaskCountdownTimer';
@@ -54,6 +55,17 @@ export default function MyTasksPage() {
   // Toggle status state
   const [isTogglingStatus, setIsTogglingStatus] = useState<string | null>(null);
 
+  // Stop task state
+  const [stopTaskConfirm, setStopTaskConfirm] = useState<any | null>(null);
+  const [isStoppingTask, setIsStoppingTask] = useState(false);
+
+  // Edit task timer state
+  const [editTimerTask, setEditTimerTask] = useState<any | null>(null);
+  const [extendHours, setExtendHours] = useState<number>(24);
+  const [isCustomExtend, setIsCustomExtend] = useState(false);
+  const [isSubmittingTimer, setIsSubmittingTimer] = useState(false);
+  const [timerError, setTimerError] = useState('');
+
   // Decline dialog & rejection proof state
   const [declineSubId, setDeclineSubId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState('');
@@ -61,6 +73,7 @@ export default function MyTasksPage() {
   const [declineFilePreview, setDeclineFilePreview] = useState<string | null>(null);
   const [viewProofModal, setViewProofModal] = useState<{
     isOpen: boolean;
+    title?: string;
     reason: string;
     proofUrl?: string;
     username?: string;
@@ -72,6 +85,15 @@ export default function MyTasksPage() {
   );
 
   const supabase = createClient();
+
+  const getSubmissionProofUrl = (sub: any): string | null => {
+    if (sub.proof_url) return sub.proof_url;
+    if (sub.decline_reason && sub.decline_reason.includes('[Proof Screenshot]:')) {
+      const parts = sub.decline_reason.split('[Proof Screenshot]:');
+      return parts[1]?.trim() || null;
+    }
+    return null;
+  };
 
   const loadMyTasks = async () => {
     if (!user) return;
@@ -178,6 +200,64 @@ export default function MyTasksPage() {
       setActionMsg({ text: err.message || 'Error updating status', type: 'error' });
     } finally {
       setIsTogglingStatus(null);
+    }
+  };
+
+  const handleStopTask = async () => {
+    if (!stopTaskConfirm) return;
+    setIsStoppingTask(true);
+    setActionMsg(null);
+    try {
+      const res = await fetch('/api/tasks/toggle-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: stopTaskConfirm.id, action: 'stop' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionMsg({ text: data.error || 'Failed to stop task', type: 'error' });
+      } else {
+        setActionMsg({ text: data.message, type: 'success' });
+        setStopTaskConfirm(null);
+        await refreshProfile();
+        await loadMyTasks();
+      }
+    } catch (err: any) {
+      setActionMsg({ text: err.message || 'Error stopping task', type: 'error' });
+    } finally {
+      setIsStoppingTask(false);
+    }
+  };
+
+  const handleSaveTimer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTimerTask || !extendHours || extendHours <= 0) return;
+    setIsSubmittingTimer(true);
+    setTimerError('');
+    try {
+      const res = await fetch('/api/tasks/edit-timer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: editTimerTask.id,
+          extendHours: Number(extendHours),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTimerError(data.error || 'Failed to update task timer');
+      } else {
+        setActionMsg({
+          text: `Task timer extended by +${extendHours} hours successfully!`,
+          type: 'success',
+        });
+        setEditTimerTask(null);
+        await loadMyTasks();
+      }
+    } catch (err: any) {
+      setTimerError(err.message || 'Error updating timer');
+    } finally {
+      setIsSubmittingTimer(false);
     }
   };
 
@@ -424,13 +504,20 @@ export default function MyTasksPage() {
                               ? 'success'
                               : task.status === 'paused'
                               ? 'warning'
+                              : task.status === 'cancelled'
+                              ? 'secondary'
                               : 'secondary'
                           }
                         >
-                          {task.status.toUpperCase()}
+                          {task.status === 'cancelled' ? 'ENDED' : task.status.toUpperCase()}
                         </Badge>
                         {task.is_premium && <Badge variant="premium">PREMIUM</Badge>}
-                        <TaskCountdownTimer createdAt={task.created_at} />
+                        <TaskCountdownTimer
+                          createdAt={task.created_at}
+                          expiresAt={task.expires_at}
+                          durationHours={task.duration_hours}
+                          status={task.status}
+                        />
                         <span className="text-xs font-bold text-[#10B981] bg-[#ECFDF5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
                           Reward: ₦{currentReward} / slot
                         </span>
@@ -460,8 +547,34 @@ export default function MyTasksPage() {
                         </span>
                       )}
 
+                      {/* If task is cancelled / ended */}
+                      {task.status === 'cancelled' && (
+                        <span className="text-xs font-semibold text-[#6B7280] bg-[#F3F4F6] px-3 py-1.5 rounded-lg border border-[#E5E7EB]">
+                          Task Ended
+                        </span>
+                      )}
+
+                      {/* Edit / Extend Timer Button */}
+                      {task.status !== 'cancelled' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditTimerTask(task);
+                            setExtendHours(24);
+                            setIsCustomExtend(false);
+                            setTimerError('');
+                          }}
+                          leftIcon={<Clock className="w-3.5 h-3.5 text-[#F95700]" />}
+                          className="text-xs font-medium"
+                          title="Edit or extend task countdown timer"
+                        >
+                          Edit Timer
+                        </Button>
+                      )}
+
                       {/* Increase reward to reach more people button */}
-                      {remainingSlots > 0 && task.status !== 'completed' && (
+                      {remainingSlots > 0 && task.status !== 'completed' && task.status !== 'cancelled' && (
                         <Button
                           size="sm"
                           variant="primary"
@@ -482,28 +595,43 @@ export default function MyTasksPage() {
                         </Button>
                       )}
 
-                      {/* Pause / Resume Button */}
-                      {remainingSlots > 0 && task.status !== 'completed' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleToggleStatus(task)}
-                          disabled={isTogglingStatus === task.id}
-                          leftIcon={
-                            task.status === 'active' ? (
-                              <Pause className="w-3.5 h-3.5 text-[#F59E0B]" />
-                            ) : (
-                              <Play className="w-3.5 h-3.5 text-[#10B981]" />
-                            )
-                          }
-                          className="text-xs font-medium"
-                        >
-                          {isTogglingStatus === task.id
-                            ? 'Updating...'
-                            : task.status === 'active'
-                            ? 'Pause Task'
-                            : 'Resume Task'}
-                        </Button>
+                      {/* Pause / Resume Button and Stop Task Button */}
+                      {remainingSlots > 0 && task.status !== 'completed' && task.status !== 'cancelled' && (
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleToggleStatus(task)}
+                            disabled={isTogglingStatus === task.id}
+                            leftIcon={
+                              task.status === 'active' ? (
+                                <Pause className="w-3.5 h-3.5 text-[#F59E0B]" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 text-[#10B981]" />
+                              )
+                            }
+                            className="text-xs font-medium"
+                          >
+                            {isTogglingStatus === task.id
+                              ? 'Updating...'
+                              : task.status === 'active'
+                              ? 'Pause Task'
+                              : 'Resume Task'}
+                          </Button>
+
+                          {task.status === 'paused' && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => setStopTaskConfirm(task)}
+                              leftIcon={<Square className="w-3.5 h-3.5" />}
+                              className="text-xs font-semibold"
+                              title="Permanently end task and refund unallocated slots"
+                            >
+                              Stop Task
+                            </Button>
+                          )}
+                        </div>
                       )}
 
                       <Button
@@ -552,6 +680,7 @@ export default function MyTasksPage() {
                               <tr>
                                 <th className="p-2.5 rounded-l-md">Temu Username</th>
                                 <th className="p-2.5">Temu Email</th>
+                                <th className="p-2.5">Completion Proof</th>
                                 <th className="p-2.5">Status</th>
                                 <th className="p-2.5">Submitted</th>
                                 <th className="p-2.5 text-right rounded-r-md">Actions</th>
@@ -565,6 +694,31 @@ export default function MyTasksPage() {
                                   </td>
                                   <td className="p-2.5 text-[#4B5563] font-mono">
                                     {sub.temu_email}
+                                  </td>
+                                  <td className="p-2.5">
+                                    {(() => {
+                                      const proof = getSubmissionProofUrl(sub);
+                                      if (!proof) {
+                                        return <span className="text-[#9CA3AF] text-[11px] italic">No proof</span>;
+                                      }
+                                      return (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setViewProofModal({
+                                              isOpen: true,
+                                              title: 'Participant Completion Proof Screenshot',
+                                              proofUrl: proof,
+                                              username: sub.temu_username,
+                                              reason: '',
+                                            })
+                                          }
+                                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[#FFF5F0] hover:bg-[#FFE8DC] text-[#F95700] border border-[#F95700]/30 text-[11px] font-bold transition-colors"
+                                        >
+                                          <Eye className="w-3 h-3" /> View Proof
+                                        </button>
+                                      );
+                                    })()}
                                   </td>
                                   <td className="p-2.5">
                                     {sub.status === 'declined_disputed' ? (
@@ -771,7 +925,9 @@ export default function MyTasksPage() {
             <div className="bg-white rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
               <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold text-[#111827]">Rejection Proof Screenshot</h3>
+                  <h3 className="text-sm sm:text-base font-bold text-[#111827]">
+                    {viewProofModal.title || 'Rejection Proof Screenshot'}
+                  </h3>
                   {viewProofModal.username && (
                     <p className="text-xs text-[#6B7280]">
                       User: <strong>{viewProofModal.username}</strong>
@@ -788,10 +944,12 @@ export default function MyTasksPage() {
               </div>
 
               <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 flex-1">
-                <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#991B1B]">
-                  <span className="font-bold block mb-0.5">Stated Rejection Reason:</span>
-                  <p>{viewProofModal.reason}</p>
-                </div>
+                {viewProofModal.reason ? (
+                  <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#991B1B]">
+                    <span className="font-bold block mb-0.5">Stated Rejection Reason:</span>
+                    <p>{viewProofModal.reason}</p>
+                  </div>
+                ) : null}
 
                 {viewProofModal.proofUrl ? (
                   <div className="space-y-2">
@@ -800,7 +958,7 @@ export default function MyTasksPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={viewProofModal.proofUrl}
-                        alt="Rejection Proof"
+                        alt="Proof Screenshot"
                         className="w-full max-h-[45vh] sm:max-h-[350px] object-contain rounded-lg mx-auto"
                       />
                     </div>
@@ -829,6 +987,221 @@ export default function MyTasksPage() {
                   Close
                 </Button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stop Task Confirmation Modal */}
+        {stopTaskConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+              <div className="p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 text-[#EF4444] flex items-center justify-center">
+                    <Square className="w-4 h-4 fill-current" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[#111827]">Stop Task Permanently</h3>
+                    <p className="text-xs text-[#6B7280]">Mark task as ended and refund unallocated slots</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStopTaskConfirm(null)}
+                  className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-4 sm:p-5 space-y-4 flex-1">
+                <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] space-y-1.5 text-xs">
+                  <p className="font-bold text-[#111827]">
+                    {parseTaskTitleAndInstructions(stopTaskConfirm.title).title}
+                  </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[#6B7280]">
+                    <span>Requested: <strong>{stopTaskConfirm.quantity_requested} slots</strong></span>
+                    <span>Approved: <strong>{stopTaskConfirm.quantity_approved} slots</strong></span>
+                    <span>
+                      Remaining:{' '}
+                      <strong className="text-[#F95700]">
+                        {Math.max(0, stopTaskConfirm.quantity_requested - stopTaskConfirm.quantity_approved)} slots
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-xs text-[#92400E] space-y-1.5">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" /> What happens when you stop this task?
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-[11px] leading-relaxed">
+                    <li>The task will be marked as <strong>ENDED</strong> to all users in the marketplace and on direct links.</li>
+                    <li>No new participant submissions will be accepted.</li>
+                    <li>
+                      Any remaining unallocated slots budget will be <strong>automatically refunded to your wallet</strong> immediately.
+                    </li>
+                    <li>Existing pending submissions can still be reviewed by you.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="p-3 sm:p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-end gap-2.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStopTaskConfirm(null)}
+                  disabled={isStoppingTask}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  isLoading={isStoppingTask}
+                  onClick={handleStopTask}
+                  leftIcon={<Square className="w-3.5 h-3.5" />}
+                >
+                  Yes, Stop Task &amp; Refund
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Task Timer Modal */}
+        {editTimerTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+              <div className="p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 text-[#F95700] flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[#111827]">Edit Task Timer</h3>
+                    <p className="text-xs text-[#6B7280]">Extend or customize countdown duration</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditTimerTask(null);
+                    setTimerError('');
+                  }}
+                  className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveTimer} className="flex flex-col flex-1 overflow-hidden">
+                <div className="overflow-y-auto p-4 sm:p-5 space-y-4 flex-1">
+                  <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] space-y-1.5 text-xs">
+                    <p className="font-bold text-[#111827]">
+                      {parseTaskTitleAndInstructions(editTimerTask.title).title}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#6B7280]">Current Expiry:</span>
+                      <TaskCountdownTimer
+                        createdAt={editTimerTask.created_at}
+                        expiresAt={editTimerTask.expires_at}
+                        durationHours={editTimerTask.duration_hours}
+                        status={editTimerTask.status}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#111827] block">
+                      Extend Active Time By:
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { label: '+6 Hours', hours: 6 },
+                        { label: '+12 Hours', hours: 12 },
+                        { label: '+24 Hours', hours: 24, isDefault: true },
+                        { label: '+48 Hours', hours: 48 },
+                      ].map((opt) => (
+                        <button
+                          key={opt.hours}
+                          type="button"
+                          onClick={() => {
+                            setExtendHours(opt.hours);
+                            setIsCustomExtend(false);
+                          }}
+                          className={`p-2.5 rounded-xl border text-center transition-all ${
+                            !isCustomExtend && extendHours === opt.hours
+                              ? 'border-[#F95700] bg-[#FFF5F0] ring-1 ring-[#F95700] font-bold text-[#F95700]'
+                              : 'border-[#E5E7EB] hover:border-[#D1D5DB] bg-white text-[#111827] text-xs font-semibold'
+                          }`}
+                        >
+                          <span className="block text-xs">{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="pt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomExtend(!isCustomExtend)}
+                        className="text-xs font-semibold text-[#F95700] hover:underline"
+                      >
+                        {isCustomExtend ? '← Back to presets' : '+ Custom extension hours'}
+                      </button>
+                      {isCustomExtend && (
+                        <div className="flex items-center gap-2 flex-1 max-w-[180px]">
+                          <Input
+                            type="number"
+                            min="1"
+                            max="168"
+                            value={extendHours.toString()}
+                            onChange={(e) => setExtendHours(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                            placeholder="e.g. 18"
+                          />
+                          <span className="text-xs text-[#6B7280]">Hours</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl text-[11px] text-[#166534] leading-relaxed">
+                    ⏱️ <strong>Timer Extension:</strong> Extending your task timer adds extra hours to your remaining time, allowing participants to keep finding and completing your Temu invite round without interruption.
+                  </div>
+
+                  {timerError && (
+                    <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#DC2626]">
+                      {timerError}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 sm:p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-end gap-2.5 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditTimerTask(null);
+                      setTimerError('');
+                    }}
+                    disabled={isSubmittingTimer}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    isLoading={isSubmittingTimer}
+                    leftIcon={<Clock className="w-3.5 h-3.5" />}
+                  >
+                    Save &amp; Extend +{extendHours}h
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         )}
