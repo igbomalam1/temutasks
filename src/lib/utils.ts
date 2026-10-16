@@ -37,15 +37,22 @@ export const DEFAULT_TASK_INSTRUCTIONS =
 
 export function parseTaskTitleAndInstructions(
   rawTitle: string | null | undefined
-): { title: string; instructions: string } {
+): { title: string; instructions: string; durationHours?: number; expiresAt?: string } {
   if (!rawTitle) {
     return { title: 'Temu Invitation Task', instructions: DEFAULT_TASK_INSTRUCTIONS };
   }
   if (rawTitle.includes('|||')) {
-    const [t, inst] = rawTitle.split('|||');
+    const parts = rawTitle.split('|||');
+    const t = parts[0]?.trim() || 'Temu Invitation Task';
+    const inst = parts[1]?.trim() || DEFAULT_TASK_INSTRUCTIONS;
+    const dur = parts[2] ? parseInt(parts[2].trim(), 10) : undefined;
+    const exp = parts[3]?.trim() || undefined;
+
     return {
-      title: t.trim() || 'Temu Invitation Task',
-      instructions: inst.trim() || DEFAULT_TASK_INSTRUCTIONS,
+      title: t,
+      instructions: inst,
+      durationHours: dur && !isNaN(dur) ? dur : undefined,
+      expiresAt: exp,
     };
   }
   return { title: rawTitle.trim(), instructions: DEFAULT_TASK_INSTRUCTIONS };

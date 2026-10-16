@@ -441,12 +441,19 @@ export default function AvailableTasksPage() {
                   {featuredSharedTask.is_premium && (
                     <Badge variant="premium">URGENT</Badge>
                   )}
-                  <TaskCountdownTimer
-                    createdAt={featuredSharedTask.created_at}
-                    expiresAt={featuredSharedTask.expires_at}
-                    durationHours={featuredSharedTask.duration_hours}
-                    status={featuredSharedTask.status}
-                  />
+                  {(() => {
+                    const parsed = parseTaskTitleAndInstructions(featuredSharedTask.title);
+                    return (
+                      <>
+                        <TaskCountdownTimer
+                          createdAt={featuredSharedTask.created_at}
+                          expiresAt={featuredSharedTask.expires_at || parsed.expiresAt}
+                          durationHours={featuredSharedTask.duration_hours || parsed.durationHours || 24}
+                          status={featuredSharedTask.status}
+                        />
+                      </>
+                    );
+                  })()}
                 </div>
                 <h2 className="text-xl font-extrabold text-[#111827]">
                   {parseTaskTitleAndInstructions(featuredSharedTask.title).title}
@@ -660,12 +667,19 @@ export default function AvailableTasksPage() {
                           </Badge>
                         )}
                       </div>
-                      <TaskCountdownTimer
-                        createdAt={task.created_at}
-                        expiresAt={task.expires_at}
-                        durationHours={task.duration_hours}
-                        status={task.status}
-                      />
+                      {(() => {
+                        const parsed = parseTaskTitleAndInstructions(task.title);
+                        return (
+                          <>
+                            <TaskCountdownTimer
+                              createdAt={task.created_at}
+                              expiresAt={task.expires_at || parsed.expiresAt}
+                              durationHours={task.duration_hours || parsed.durationHours || 24}
+                              status={task.status}
+                            />
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <h3 className="text-base font-bold text-[#111827] line-clamp-1">
@@ -839,15 +853,18 @@ export default function AvailableTasksPage() {
                       ? `Batch Submit (${batchTaskIds.length} Tasks)`
                       : 'Complete & Submit Task'}
                   </h3>
-                  {selectedTask && (
-                    <TaskCountdownTimer
-                      createdAt={selectedTask.created_at}
-                      expiresAt={selectedTask.expires_at}
-                      durationHours={selectedTask.duration_hours}
-                      status={selectedTask.status}
-                      variant="compact"
-                    />
-                  )}
+                  {selectedTask && (() => {
+                    const parsed = parseTaskTitleAndInstructions(selectedTask.title);
+                    return (
+                      <TaskCountdownTimer
+                        createdAt={selectedTask.created_at}
+                        expiresAt={selectedTask.expires_at || parsed.expiresAt}
+                        durationHours={selectedTask.duration_hours || parsed.durationHours || 24}
+                        status={selectedTask.status}
+                        variant="compact"
+                      />
+                    );
+                  })()}
                 </div>
                 <button
                   onClick={handleCloseModal}

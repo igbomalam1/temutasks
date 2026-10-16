@@ -261,37 +261,76 @@ export async function POST(request: Request) {
       // 3. Insert and activate each task directly
       const createdTasks: any[] = [];
       for (const t of tasksToCreate) {
-        const fullTitle = `${t.title}|||${instructions}`;
-        const { data: inserted, error: insertErr } = await adminSupabase
+        const fullTitle = `${t.title}|||${instructions}|||${durationHours}|||${expiresAt}`;
+        const basePayload: any = {
+          user_id: user.id,
+          task_type: t.taskType,
+          title: fullTitle,
+          invitation_link: t.link,
+          quantity_requested: t.quantity,
+          quantity_approved: 0,
+          quantity_reserved: 0,
+          reward_per_participant_kobo: t.rewardPerPartKobo.toString(),
+          commission_per_referrer_kobo: t.commPerRefKobo.toString(),
+          base_cost_kobo: t.baseCostKobo.toString(),
+          platform_fee_kobo: platformFeeKobo.toString(),
+          premium_fee_kobo: premiumFeeKobo.toString(),
+          total_cost_kobo: totalCostKobo.toString(),
+          is_premium: !!isPremium,
+          status: 'active', // Immediately live!
+          payment_reference: reference,
+        };
+
+        // Try insert with explicit timer columns first
+        let { data: inserted, error: insertErr } = await adminSupabase
           .from('temutask_tasks')
           .insert({
-            user_id: user.id,
-            task_type: t.taskType,
-            title: fullTitle,
-            invitation_link: t.link,
-            quantity_requested: t.quantity,
-            quantity_approved: 0,
-            quantity_reserved: 0,
-            reward_per_participant_kobo: t.rewardPerPartKobo.toString(),
-            commission_per_referrer_kobo: t.commPerRefKobo.toString(),
-            base_cost_kobo: t.baseCostKobo.toString(),
-            platform_fee_kobo: platformFeeKobo.toString(),
-            premium_fee_kobo: premiumFeeKobo.toString(),
-            total_cost_kobo: totalCostKobo.toString(),
-            is_premium: !!isPremium,
+            ...basePayload,
             duration_hours: durationHours,
             expires_at: expiresAt,
-            status: 'active', // Immediately live!
-            payment_reference: reference,
           })
           .select()
           .single();
+
+        // If columns do not exist in Supabase schema cache, gracefully insert basePayload
+        if (insertErr && (insertErr.message?.includes('duration_hours') || insertErr.code === 'PGRST204')) {
+          console.warn('temutask_tasks duration_hours column not in schema cache; inserting base payload with encoded metadata');
+          const retry = await adminSupabase
+            .from('temutask_tasks')
+            .insert(basePayload)
+            .select()
+            .single();
+          inserted = retry.data;
+          insertErr = retry.error;
+        }
 
         if (insertErr) {
           console.error('Error inserting task via wallet payment:', insertErr);
         } else if (inserted) {
           createdTasks.push(inserted);
         }
+      }
+
+      // If task insertion failed completely, auto-refund wallet balance and return error
+      if (createdTasks.length === 0) {
+        console.error('Task insertion failed completely for ref:', reference);
+        await executeWalletTransaction({
+          userId: user.id,
+          amountKobo: totalCostKobo,
+          direction: 'credit',
+          transactionType: 'task_refund',
+          description: `Auto-refund: Task creation failed to save (${reference})`,
+          relatedId: reference,
+          idempotencyKey: `AUTO-REFUND-${reference}`,
+        });
+
+        return NextResponse.json(
+          {
+            error:
+              'Failed to publish task to marketplace. Your wallet balance has been automatically refunded.',
+          },
+          { status: 500 }
+        );
       }
 
       // 4. In-app notification to task creator

@@ -83,31 +83,49 @@ export async function GET(request: Request) {
         ];
 
     const createdTasks: any[] = [];
+    const durationHours = payload.durationHours || 24;
+    const expiresAt = payload.expiresAt || new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+
     for (const t of tasksToInsert) {
-      const fullTitle = `${t.title}|||${instructions}`;
-      const { data: createdTask, error: taskCreateError } = await supabase
+      const fullTitle = `${t.title}|||${instructions}|||${durationHours}|||${expiresAt}`;
+      const basePayload: any = {
+        user_id: order.user_id,
+        task_type: t.taskType,
+        title: fullTitle,
+        invitation_link: t.invitationLink,
+        quantity_requested: t.quantity,
+        quantity_approved: 0,
+        reward_per_participant_kobo: t.rewardPerPartKobo,
+        commission_per_referrer_kobo: t.commPerRefKobo,
+        base_cost_kobo: t.baseCostKobo,
+        platform_fee_kobo: payload.platformFeeKobo,
+        premium_fee_kobo: payload.premiumFeeKobo,
+        total_cost_kobo: payload.totalCostKobo,
+        is_premium: !!payload.isPremium,
+        status: 'active', // Published
+        payment_reference: reference,
+      };
+
+      let { data: createdTask, error: taskCreateError } = await supabase
         .from('temutask_tasks')
         .insert({
-          user_id: order.user_id,
-          task_type: t.taskType,
-          title: fullTitle,
-          invitation_link: t.invitationLink,
-          quantity_requested: t.quantity,
-          quantity_approved: 0,
-          reward_per_participant_kobo: t.rewardPerPartKobo,
-          commission_per_referrer_kobo: t.commPerRefKobo,
-          base_cost_kobo: t.baseCostKobo,
-          platform_fee_kobo: payload.platformFeeKobo,
-          premium_fee_kobo: payload.premiumFeeKobo,
-          total_cost_kobo: payload.totalCostKobo,
-          is_premium: !!payload.isPremium,
-          duration_hours: payload.durationHours || 24,
-          expires_at: payload.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          status: 'active', // Published
-          payment_reference: reference,
+          ...basePayload,
+          duration_hours: durationHours,
+          expires_at: expiresAt,
         })
         .select()
         .single();
+
+      if (taskCreateError && (taskCreateError.message?.includes('duration_hours') || taskCreateError.code === 'PGRST204')) {
+        console.warn('temutask_tasks duration_hours column not in schema cache; inserting base payload');
+        const retry = await supabase
+          .from('temutask_tasks')
+          .insert(basePayload)
+          .select()
+          .single();
+        createdTask = retry.data;
+        taskCreateError = retry.error;
+      }
 
       if (taskCreateError) {
         console.error('Error publishing task after payment:', taskCreateError);

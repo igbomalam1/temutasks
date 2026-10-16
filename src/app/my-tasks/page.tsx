@@ -508,12 +508,17 @@ export default function MyTasksPage() {
                           {task.status === 'cancelled' ? 'ENDED' : task.status.toUpperCase()}
                         </Badge>
                         {task.is_premium && <Badge variant="premium">PREMIUM</Badge>}
-                        <TaskCountdownTimer
-                          createdAt={task.created_at}
-                          expiresAt={task.expires_at}
-                          durationHours={task.duration_hours}
-                          status={task.status}
-                        />
+                        {(() => {
+                          const parsed = parseTaskTitleAndInstructions(task.title);
+                          return (
+                            <TaskCountdownTimer
+                              createdAt={task.created_at}
+                              expiresAt={task.expires_at || parsed.expiresAt}
+                              durationHours={task.duration_hours || parsed.durationHours || 24}
+                              status={task.status}
+                            />
+                          );
+                        })()}
                         <span className="text-xs font-bold text-[#10B981] bg-[#ECFDF5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
                           Reward: ₦{currentReward} / slot
                         </span>
@@ -1101,12 +1106,17 @@ export default function MyTasksPage() {
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="text-[#6B7280]">Current Expiry:</span>
-                      <TaskCountdownTimer
-                        createdAt={editTimerTask.created_at}
-                        expiresAt={editTimerTask.expires_at}
-                        durationHours={editTimerTask.duration_hours}
-                        status={editTimerTask.status}
-                      />
+                      {(() => {
+                        const parsed = parseTaskTitleAndInstructions(editTimerTask.title);
+                        return (
+                          <TaskCountdownTimer
+                            createdAt={editTimerTask.created_at}
+                            expiresAt={editTimerTask.expires_at || parsed.expiresAt}
+                            durationHours={editTimerTask.duration_hours || parsed.durationHours || 24}
+                            status={editTimerTask.status}
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
 

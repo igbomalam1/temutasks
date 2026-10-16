@@ -18,7 +18,8 @@ export type TransactionType =
   | 'pro_subscription_wallet'
   | 'admin_adjustment'
   | 'wallet_deposit'
-  | 'deposit';
+  | 'deposit'
+  | 'task_refund';
 
 export interface WalletOperationParams {
   userId: string;

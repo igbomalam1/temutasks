@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { parseTaskTitleAndInstructions } from '@/lib/utils';
 
 export async function POST(request: Request) {
   try {
@@ -77,14 +78,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: updateErr } = await adminSupabase
+    // Also encode in title for reliable persistence regardless of database column availability
+    const { title: rawTitle, instructions: inst } = parseTaskTitleAndInstructions(task.title);
+    const updatedTitle = `${rawTitle}|||${inst}|||${durationHours}|||${calculatedExpiresAt}`;
+
+    let { error: updateErr } = await adminSupabase
       .from('temutask_tasks')
       .update({
+        title: updatedTitle,
         duration_hours: durationHours,
         expires_at: calculatedExpiresAt,
         updated_at: new Date().toISOString(),
       })
       .eq('id', taskId);
+
+    if (updateErr && (updateErr.message?.includes('duration_hours') || updateErr.code === 'PGRST204')) {
+      console.warn('duration_hours column not in schema cache; saving timer in title');
+      const retry = await adminSupabase
+        .from('temutask_tasks')
+        .update({
+          title: updatedTitle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', taskId);
+      updateErr = retry.error;
+    }
 
     if (updateErr) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
