@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { verifyNovacPayment } from '@/lib/novac';
 import { executeWalletTransaction } from '@/lib/wallet';
 import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
+import { dispatchNewTaskAlerts } from '@/lib/task-notifications';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -178,12 +179,12 @@ export async function GET(request: Request) {
       }
     }
 
-    // Pro Member Task Alert: Send email alert to active opted-in Pro users
+    // Task Alert: Send email alert to audience (All Users or Pro Only based on admin setting)
     for (const ct of createdTasks) {
       try {
-        await notifyProMembersAboutNewTask(ct, appUrl);
+        await dispatchNewTaskAlerts(ct, appUrl);
       } catch (e) {
-        console.error('Error alerting Pro members:', e);
+        console.error('Error dispatching task alert emails:', e);
       }
     }
 
@@ -319,68 +320,4 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(`${appUrl}/dashboard`);
-}
-
-// Helper to notify active, opted-in Pro members
-async function notifyProMembersAboutNewTask(task: any, appUrl: string) {
-  const supabase = createAdminClient();
-
-  // Find active Pro users
-  const { data: proUsers, error } = await supabase
-    .from('temutask_profiles')
-    .select('id, email, full_name, pro_expires_at, status')
-    .eq('tier', 'pro');
-
-  if (error || !proUsers || proUsers.length === 0) return;
-
-  const now = new Date();
-  const activeProUsers = proUsers.filter((u: any) => {
-    if (u.status === 'suspended') return false;
-    if (!u.email) return false;
-    if (!u.pro_expires_at) return true;
-    return new Date(u.pro_expires_at) > now;
-  });
-
-  if (activeProUsers.length === 0) return;
-
-  const { data: prefs } = await supabase
-    .from('temutask_notification_preferences')
-    .select('user_id, email_task_alerts')
-    .in('user_id', activeProUsers.map((u: any) => u.id));
-
-  const prefMap = new Map((prefs || []).map((p: any) => [p.user_id, p.email_task_alerts]));
-
-  const rewardNaira = (Number(task.reward_per_participant_kobo || 0) / 100).toLocaleString();
-  const taskTitle = task.title ? task.title.split('|||')[0].trim() : 'Temu Task';
-
-  const sendPromises = activeProUsers.map(async (user: any) => {
-    if (prefMap.get(user.id) === false) return;
-
-    const emailHtml = renderEmailTemplate({
-      title: 'New Temu Task Available! ⚡',
-      contentHtml: `<p>A new task matching your Pro eligibility has just been published on TemuTasks:</p>
-      <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; margin: 16px 0;">
-        <p style="margin: 4px 0;"><strong>Title:</strong> ${taskTitle}</p>
-        <p style="margin: 4px 0;"><strong>Reward:</strong> ₦${rewardNaira}</p>
-        <p style="margin: 4px 0;"><strong>Available Slots:</strong> ${task.quantity_requested}</p>
-        <p style="margin: 4px 0;"><strong>Type:</strong> ${task.task_type === 'new_user' ? 'New User Invitation' : 'Existing User Invitation'}</p>
-      </div>
-      <p>As a <strong>Pro Member</strong>, you get instant email alerts so you can claim slots before they are filled.</p>`,
-      ctaText: 'Do Task Now',
-      ctaUrl: `${appUrl}/tasks`,
-    });
-
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: `[TemuTasks Pro Alert] ⚡ New Task: "${taskTitle}" (₦${rewardNaira})`,
-        html: emailHtml,
-        eventType: 'pro_task_alert',
-      });
-    } catch (e) {
-      console.error(`Failed to dispatch Pro alert to ${user.email}:`, e);
-    }
-  });
-
-  await Promise.allSettled(sendPromises);
 }

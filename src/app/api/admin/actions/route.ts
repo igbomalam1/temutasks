@@ -1,8 +1,36 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { sendEmail, renderEmailTemplate } from '@/lib/sendbyte';
+import { getTaskEmailAudience, setTaskEmailAudience, dispatchNewTaskAlerts, TaskEmailAudience } from '@/lib/task-notifications';
 
 export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  try {
+    const supabase = createClient();
+    const adminSupabase = createAdminClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: adminProfile } = await adminSupabase
+      .from('temutask_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (adminProfile?.role !== 'admin' && adminProfile?.role !== 'moderator') {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
+    const audience = await getTaskEmailAudience();
+    return NextResponse.json({ audience });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -26,8 +54,136 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { action, userId, amountNaira, days, reason } = body;
+    const { action, userId, amountNaira, days, reason, taskId, audience, withdrawalId } = body;
 
+    // 1. ACTION: GET TASK EMAIL AUDIENCE
+    if (action === 'get_task_email_audience') {
+      const currentAudience = await getTaskEmailAudience();
+      return NextResponse.json({ success: true, audience: currentAudience });
+    }
+
+    // 2. ACTION: SET TASK EMAIL AUDIENCE
+    if (action === 'set_task_email_audience') {
+      const aud: TaskEmailAudience = audience === 'pro_only' ? 'pro_only' : 'all';
+      await setTaskEmailAudience(aud, user.id);
+      return NextResponse.json({
+        success: true,
+        audience: aud,
+        message: `Task alert emails are now configured for: ${aud === 'all' ? 'All Registered Users' : 'Pro Members Only'}`,
+      });
+    }
+
+    // 3. ACTION: BROADCAST TASK EMAIL ALERT
+    if (action === 'broadcast_task_email') {
+      if (!taskId) {
+        return NextResponse.json({ error: 'Task ID is required for broadcast' }, { status: 400 });
+      }
+
+      const { data: task, error: taskErr } = await adminSupabase
+        .from('temutask_tasks')
+        .select('*')
+        .eq('id', taskId)
+        .single();
+
+      if (taskErr || !task) {
+        return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+      }
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top';
+      const targetAudience: TaskEmailAudience | undefined =
+        audience === 'all' || audience === 'pro_only' ? audience : undefined;
+      const result = await dispatchNewTaskAlerts(task, appUrl, targetAudience);
+
+      await adminSupabase.from('temutask_admin_audit_logs').insert({
+        admin_id: user.id,
+        action: 'broadcast_task_email',
+        target_type: 'task',
+        target_id: taskId,
+        details: { count: result.count, audience: result.audience },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Broadcasted task alert to ${result.count} ${result.audience === 'all' ? 'registered users' : 'Pro members'}!`,
+        count: result.count,
+        audience: result.audience,
+      });
+    }
+
+    // 4. ACTION: PAY WITHDRAWAL (Does not require userId)
+    if (action === 'pay_withdrawal') {
+      if (!withdrawalId) {
+        return NextResponse.json({ error: 'Withdrawal ID required' }, { status: 400 });
+      }
+
+      const { data: wth } = await adminSupabase
+        .from('temutask_withdrawals')
+        .select('*, temutask_profiles!user_id(email, full_name)')
+        .eq('id', withdrawalId)
+        .maybeSingle();
+
+      if (!wth) {
+        return NextResponse.json({ error: 'Withdrawal request not found' }, { status: 404 });
+      }
+
+      await adminSupabase
+        .from('temutask_withdrawals')
+        .update({
+          status: 'paid',
+          processed_by: user.id,
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', withdrawalId);
+
+      const amtNaira = (Number(wth.amount_kobo) / 100).toLocaleString();
+
+      // In-app notification
+      await adminSupabase.from('temutask_notifications').insert({
+        user_id: wth.user_id,
+        title: 'Cash Out Paid! 💸',
+        message: `Your withdrawal of ₦${amtNaira} to ${wth.payment_destination?.toUpperCase()} (${wth.account_number}) has been completed. Ref: ${wth.reference}.`,
+        type: 'withdrawal_paid',
+        link: '/wallet',
+      });
+
+      // Email receipt to user
+      const recipientEmail = wth.temutask_profiles?.email;
+      if (recipientEmail) {
+        const payoutHtml = renderEmailTemplate({
+          title: 'Your Cash Out Has Been Paid! 💸',
+          contentHtml: `<p>Hello ${wth.temutask_profiles?.full_name || 'User'},</p>
+          <p>Your withdrawal request has been successfully processed and disbursed:</p>
+          <p><strong>Net Amount Paid:</strong> <span style="font-size: 16px; color: #10B981; font-weight: bold;">₦${amtNaira}.00</span><br>
+          <strong>Platform Transfer Fee:</strong> ₦50.00<br>
+          <strong>Destination:</strong> ${wth.payment_destination?.toUpperCase()}<br>
+          <strong>Account Number:</strong> ${wth.account_number}<br>
+          <strong>Account Name:</strong> ${wth.account_name}<br>
+          <strong>Reference:</strong> ${wth.reference}</p>
+          <p>The funds should reflect in your bank/wallet account shortly.</p>`,
+          ctaText: 'View Wallet',
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
+        });
+
+        sendEmail({
+          to: recipientEmail,
+          subject: `[TemuTasks] Withdrawal Paid: ₦${amtNaira}`,
+          html: payoutHtml,
+          eventType: 'withdrawal_completed',
+        }).catch((e) => console.error('Error emailing withdrawal payout:', e));
+      }
+
+      await adminSupabase.from('temutask_admin_audit_logs').insert({
+        admin_id: user.id,
+        action: 'pay_withdrawal',
+        target_type: 'withdrawal',
+        target_id: withdrawalId,
+        details: { amount_kobo: wth.amount_kobo, reference: wth.reference },
+      });
+
+      return NextResponse.json({ success: true, message: `Withdrawal of ₦${amtNaira} marked as paid!` });
+    }
+
+    // --- User-specific actions below: require userId ---
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
@@ -287,80 +443,6 @@ export async function POST(request: Request) {
         success: true,
         message: `Changed ${targetUser.email} tier to Basic.`,
       });
-    }
-
-    // 4. ACTION: PAY WITHDRAWAL
-    if (action === 'pay_withdrawal') {
-      const { withdrawalId } = body;
-      if (!withdrawalId) {
-        return NextResponse.json({ error: 'Withdrawal ID required' }, { status: 400 });
-      }
-
-      const { data: wth } = await adminSupabase
-        .from('temutask_withdrawals')
-        .select('*, temutask_profiles!user_id(email, full_name)')
-        .eq('id', withdrawalId)
-        .maybeSingle();
-
-      if (!wth) {
-        return NextResponse.json({ error: 'Withdrawal request not found' }, { status: 404 });
-      }
-
-      await adminSupabase
-        .from('temutask_withdrawals')
-        .update({
-          status: 'paid',
-          processed_by: user.id,
-          processed_at: new Date().toISOString(),
-        })
-        .eq('id', withdrawalId);
-
-      const amtNaira = (Number(wth.amount_kobo) / 100).toLocaleString();
-
-      // In-app notification
-      await adminSupabase.from('temutask_notifications').insert({
-        user_id: wth.user_id,
-        title: 'Cash Out Paid! 💸',
-        message: `Your withdrawal of ₦${amtNaira} to ${wth.payment_destination?.toUpperCase()} (${wth.account_number}) has been completed. Ref: ${wth.reference}.`,
-        type: 'withdrawal_paid',
-        link: '/wallet',
-      });
-
-      // Email receipt to user
-      const recipientEmail = wth.temutask_profiles?.email;
-      if (recipientEmail) {
-        const payoutHtml = renderEmailTemplate({
-          title: 'Your Cash Out Has Been Paid! 💸',
-          contentHtml: `<p>Hello ${wth.temutask_profiles?.full_name || 'User'},</p>
-          <p>Your withdrawal request has been successfully processed and disbursed:</p>
-          <p><strong>Net Amount Paid:</strong> <span style="font-size: 16px; color: #10B981; font-weight: bold;">₦${amtNaira}.00</span><br>
-          <strong>Platform Transfer Fee:</strong> ₦50.00<br>
-          <strong>Destination:</strong> ${wth.payment_destination?.toUpperCase()}<br>
-          <strong>Account Number:</strong> ${wth.account_number}<br>
-          <strong>Account Name:</strong> ${wth.account_name}<br>
-          <strong>Reference:</strong> ${wth.reference}</p>
-          <p>The funds should reflect in your bank/wallet account shortly.</p>`,
-          ctaText: 'View Wallet',
-          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://temutasks.top'}/wallet`,
-        });
-
-        sendEmail({
-          to: recipientEmail,
-          subject: `[TemuTasks] Withdrawal Paid: ₦${amtNaira}`,
-          html: payoutHtml,
-          eventType: 'withdrawal_completed',
-        }).catch((e) => console.error('Error emailing withdrawal payout:', e));
-      }
-
-      await adminSupabase.from('temutask_admin_audit_logs').insert({
-        admin_id: user.id,
-        action: 'pay_withdrawal',
-        target_type: 'withdrawal',
-        target_id: withdrawalId,
-        details: { amount_kobo: wth.amount_kobo, reference: wth.reference },
-      });
-
-      return NextResponse.json({ success: true, message: `Withdrawal of ₦${amtNaira} marked as paid!` });
     }
 
     return NextResponse.json({ error: 'Invalid admin action' }, { status: 400 });

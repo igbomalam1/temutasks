@@ -92,7 +92,26 @@ export default function AdminDashboardPage() {
   const [proReason, setProReason] = useState('');
   const [isUpgradingPro, setIsUpgradingPro] = useState(false);
 
+  // Task email notification audience settings
+  const [taskEmailAudience, setTaskEmailAudience] = useState<'all' | 'pro_only'>('all');
+  const [isSavingAudience, setIsSavingAudience] = useState(false);
+  const [selectedTaskForBroadcast, setSelectedTaskForBroadcast] = useState<any | null>(null);
+  const [broadcastAudience, setBroadcastAudience] = useState<'all' | 'pro_only'>('all');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
   const supabase = createClient();
+
+  useEffect(() => {
+    // Fetch live audience setting on load
+    fetch('/api/admin/actions')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.audience) {
+          setTaskEmailAudience(data.audience);
+        }
+      })
+      .catch((e) => console.error('Error fetching email audience:', e));
+  }, []);
 
   useEffect(() => {
     loadTabContent();
@@ -351,6 +370,59 @@ export default function AdminDashboardPage() {
       setMsg({ text: err.message || 'Error upgrading Pro', type: 'error' });
     } finally {
       setIsUpgradingPro(false);
+    }
+  };
+
+  const handleSaveAudience = async (newAudience: 'all' | 'pro_only') => {
+    setIsSavingAudience(true);
+    try {
+      const res = await fetch('/api/admin/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'set_task_email_audience',
+          audience: newAudience,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ text: data.error || 'Failed to update audience setting', type: 'error' });
+      } else {
+        setTaskEmailAudience(newAudience);
+        setMsg({ text: data.message || 'Task email audience updated successfully!', type: 'success' });
+      }
+    } catch (err: any) {
+      setMsg({ text: err.message || 'Error updating audience', type: 'error' });
+    } finally {
+      setIsSavingAudience(false);
+    }
+  };
+
+  const handleBroadcastTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTaskForBroadcast) return;
+    setIsBroadcasting(true);
+    try {
+      const res = await fetch('/api/admin/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'broadcast_task_email',
+          taskId: selectedTaskForBroadcast.id,
+          audience: broadcastAudience,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ text: data.error || 'Failed to broadcast task alert', type: 'error' });
+      } else {
+        setMsg({ text: data.message || 'Task alert emails broadcasted successfully!', type: 'success' });
+        setSelectedTaskForBroadcast(null);
+      }
+    } catch (err: any) {
+      setMsg({ text: err.message || 'Error broadcasting email', type: 'error' });
+    } finally {
+      setIsBroadcasting(false);
     }
   };
 
@@ -692,9 +764,24 @@ export default function AdminDashboardPage() {
           {activeTab === 'tasks' && (
             <Card className="p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="text-base font-bold text-[#111827]">
-                  Marketplace Tasks ({filteredItems.length})
-                </h3>
+                <div>
+                  <h3 className="text-base font-bold text-[#111827]">
+                    Marketplace Tasks ({filteredItems.length})
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-[#6B7280]">
+                    <span>Auto-Email Alerts:</span>
+                    <Badge variant={taskEmailAudience === 'all' ? 'success' : 'premium'} className="text-[10px]">
+                      {taskEmailAudience === 'all' ? '⚡ ALL USERS' : '⭐ PRO ONLY'}
+                    </Badge>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('settings')}
+                      className="text-[#F95700] hover:underline font-medium text-[11px] ml-1"
+                    >
+                      Change in Settings →
+                    </button>
+                  </div>
+                </div>
                 <div className="w-full sm:w-64">
                   <Input
                     placeholder="Search tasks..."
@@ -715,7 +802,7 @@ export default function AdminDashboardPage() {
                       <th className="p-3">Progress</th>
                       <th className="p-3">Reward/Slot</th>
                       <th className="p-3">Total Paid</th>
-                      <th className="p-3 text-right rounded-r-md">Status</th>
+                      <th className="p-3 text-right rounded-r-md">Status &amp; Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E5E7EB]">
@@ -751,9 +838,25 @@ export default function AdminDashboardPage() {
                           {formatNaira(BigInt(t.total_paid_kobo || 0))}
                         </td>
                         <td className="p-3 text-right">
-                          <Badge variant={t.status === 'active' ? 'success' : 'secondary'}>
-                            {(t.status || 'pending').toUpperCase()}
-                          </Badge>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Badge variant={t.status === 'active' ? 'success' : 'secondary'}>
+                              {(t.status || 'pending').toUpperCase()}
+                            </Badge>
+                            {t.status === 'active' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-[11px] h-7 px-2 border-[#E5E7EB] hover:border-[#F95700] hover:text-[#F95700] flex items-center gap-1 font-semibold"
+                                onClick={() => {
+                                  setSelectedTaskForBroadcast(t);
+                                  setBroadcastAudience(taskEmailAudience);
+                                }}
+                              >
+                                <Mail className="w-3 h-3 text-[#F95700]" />
+                                <span>Broadcast</span>
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1244,35 +1347,154 @@ export default function AdminDashboardPage() {
 
           {/* TAB 16: SETTINGS */}
           {activeTab === 'settings' && (
-            <Card className="p-6 space-y-4">
-              <h3 className="text-base font-bold text-[#111827]">Platform Default Configuration</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">Existing User Price Default / Split</span>
-                  <span className="font-bold text-sm text-[#111827]">₦100 (₦80 / ₦20)</span>
+            <div className="space-y-6">
+              {/* NEW TASK EMAIL NOTIFICATIONS AUDIENCE SETTING */}
+              <Card className="p-6 space-y-4 border-2 border-[#F95700]/20 bg-linear-to-br from-white to-[#FFFBF9]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5E7EB]">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#FFF5F0] text-[#F95700] flex items-center justify-center font-bold">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-base font-bold text-[#111827]">
+                        New Task Email Alerts Audience
+                      </h3>
+                    </div>
+                    <p className="text-xs text-[#6B7280]">
+                      Configure which audience automatically receives email notifications whenever a new task is published.
+                    </p>
+                  </div>
+                  <div>
+                    <Badge variant={taskEmailAudience === 'all' ? 'success' : 'premium'}>
+                      CURRENT: {taskEmailAudience === 'all' ? '⚡ ALL REGISTERED USERS' : '⭐ PRO MEMBERS ONLY'}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">New User Price Default / Split</span>
-                  <span className="font-bold text-sm text-[#111827]">₦500 (₦400 / ₦100)</span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  {/* Option 1: All Registered Users */}
+                  <div
+                    onClick={() => handleSaveAudience('all')}
+                    className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex flex-col justify-between space-y-3 ${
+                      taskEmailAudience === 'all'
+                        ? 'border-[#F95700] bg-[#FFF8F5] shadow-xs'
+                        : 'border-[#E5E7EB] bg-white hover:border-[#F95700]/40'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-[#111827]">All Registered Users</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981]">
+                            Recommended
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#6B7280]">
+                          Every registered user with a valid email receives an instant task alert email. Maximizes reach and accelerates task completion.
+                        </p>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                          taskEmailAudience === 'all'
+                            ? 'border-[#F95700] bg-[#F95700] text-white'
+                            : 'border-[#D1D5DB] bg-white'
+                        }`}
+                      >
+                        {taskEmailAudience === 'all' && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={taskEmailAudience === 'all' ? 'primary' : 'outline'}
+                      className="w-full text-xs font-semibold"
+                      disabled={isSavingAudience}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveAudience('all');
+                      }}
+                    >
+                      {taskEmailAudience === 'all' ? 'Active Setting' : 'Switch to All Users'}
+                    </Button>
+                  </div>
+
+                  {/* Option 2: Pro Members Only */}
+                  <div
+                    onClick={() => handleSaveAudience('pro_only')}
+                    className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex flex-col justify-between space-y-3 ${
+                      taskEmailAudience === 'pro_only'
+                        ? 'border-[#F95700] bg-[#FFF8F5] shadow-xs'
+                        : 'border-[#E5E7EB] bg-white hover:border-[#F95700]/40'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-[#111827]">Pro Members Only</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F59E0B]/15 text-[#D97706]">
+                            VIP Exclusive
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#6B7280]">
+                          Only members with an active Pro membership pass receive task alert emails. Keeps alerts exclusive to paying Pro users.
+                        </p>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                          taskEmailAudience === 'pro_only'
+                            ? 'border-[#F95700] bg-[#F95700] text-white'
+                            : 'border-[#D1D5DB] bg-white'
+                        }`}
+                      >
+                        {taskEmailAudience === 'pro_only' && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={taskEmailAudience === 'pro_only' ? 'primary' : 'outline'}
+                      className="w-full text-xs font-semibold"
+                      disabled={isSavingAudience}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveAudience('pro_only');
+                      }}
+                    >
+                      {taskEmailAudience === 'pro_only' ? 'Active Setting' : 'Switch to Pro Only'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">Standard Platform Fee / Premium Add-on</span>
-                  <span className="font-bold text-sm text-[#111827]">₦200 / +₦200</span>
+              </Card>
+
+              {/* PLATFORM CONFIGURATION REFERENCE */}
+              <Card className="p-6 space-y-4">
+                <h3 className="text-base font-bold text-[#111827]">Platform Default Configuration</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[#6B7280] block">Existing User Price Default / Split</span>
+                    <span className="font-bold text-sm text-[#111827]">₦100 (₦80 / ₦20)</span>
+                  </div>
+                  <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[#6B7280] block">New User Price Default / Split</span>
+                    <span className="font-bold text-sm text-[#111827]">₦500 (₦400 / ₦100)</span>
+                  </div>
+                  <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[#6B7280] block">Standard Platform Fee / Premium Add-on</span>
+                    <span className="font-bold text-sm text-[#111827]">₦200 / +₦200</span>
+                  </div>
+                  <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[#6B7280] block">Pro Pass Price &amp; Duration</span>
+                    <span className="font-bold text-sm text-[#111827]">₦200 / 14 Days</span>
+                  </div>
+                  <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[#6B7280] block">Nightly Auto-Review Cutoff</span>
+                    <span className="font-bold text-sm text-[#111827]">23:00 (Africa/Lagos)</span>
+                  </div>
+                  <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
+                    <span className="text-[#6B7280] block">Supported Cash Out Channels</span>
+                    <span className="font-bold text-sm text-[#111827]">OPay, PalmPay, Moniepoint</span>
+                  </div>
                 </div>
-                <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">Pro Pass Price &amp; Duration</span>
-                  <span className="font-bold text-sm text-[#111827]">₦200 / 14 Days</span>
-                </div>
-                <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">Nightly Auto-Review Cutoff</span>
-                  <span className="font-bold text-sm text-[#111827]">23:00 (Africa/Lagos)</span>
-                </div>
-                <div className="p-3 bg-[#F7F7F8] rounded-xl border border-[#E5E7EB]">
-                  <span className="text-[#6B7280] block">Supported Cash Out Channels</span>
-                  <span className="font-bold text-sm text-[#111827]">OPay, PalmPay, Moniepoint</span>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           )}
         </main>
       </div>
@@ -1426,6 +1648,153 @@ export default function AdminDashboardPage() {
                   loadingText="Granting Pro..."
                 >
                   Grant {proDays} Days Pro
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: BROADCAST TASK EMAIL ALERT */}
+      {selectedTaskForBroadcast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col shadow-2xl relative border border-[#E5E7EB] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            <div className="p-3.5 sm:p-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0 bg-white">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#FFF5F0] text-[#F95700] flex items-center justify-center font-bold">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-[#111827]">
+                  Broadcast Task Email Alert
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedTaskForBroadcast(null)}
+                className="p-1 rounded-full text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleBroadcastTask} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              <div className="overflow-y-auto p-4 sm:p-5 space-y-4 flex-1">
+                {/* Task Details Card */}
+                <div className="p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] text-xs space-y-2">
+                  <span className="text-[#6B7280] block text-[11px] font-semibold uppercase tracking-wider">
+                    Task To Broadcast
+                  </span>
+                  <strong className="text-sm text-[#111827] block">
+                    {selectedTaskForBroadcast.title?.split('|||')[0]}
+                  </strong>
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#E5E7EB]/60">
+                    <div>
+                      <span className="text-[#6B7280] block text-[10px]">Reward / Participant:</span>
+                      <strong className="text-sm text-[#10B981]">
+                        ₦{(Number(selectedTaskForBroadcast.reward_per_participant_kobo || 0) / 100).toLocaleString()}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-[#6B7280] block text-[10px]">Requested Slots:</span>
+                      <strong className="text-sm text-[#111827]">
+                        {selectedTaskForBroadcast.quantity_requested} Slots
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audience Selection */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-[#111827]">
+                    Select Target Audience
+                  </label>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <div
+                      onClick={() => setBroadcastAudience('all')}
+                      className={`cursor-pointer p-3 rounded-xl border transition-all flex items-center justify-between ${
+                        broadcastAudience === 'all'
+                          ? 'border-[#F95700] bg-[#FFF8F5]'
+                          : 'border-[#E5E7EB] hover:border-[#D1D5DB]'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-[#111827]">All Registered Users</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#10B981]/15 text-[#10B981]">
+                            All Users
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#6B7280]">
+                          Dispatches to all active members on TemuTasks.
+                        </p>
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          broadcastAudience === 'all'
+                            ? 'border-[#F95700] bg-[#F95700] text-white'
+                            : 'border-[#D1D5DB] bg-white'
+                        }`}
+                      >
+                        {broadcastAudience === 'all' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setBroadcastAudience('pro_only')}
+                      className={`cursor-pointer p-3 rounded-xl border transition-all flex items-center justify-between ${
+                        broadcastAudience === 'pro_only'
+                          ? 'border-[#F95700] bg-[#FFF8F5]'
+                          : 'border-[#E5E7EB] hover:border-[#D1D5DB]'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-[#111827]">Pro Members Only</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#F59E0B]/15 text-[#D97706]">
+                            Pro Only
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#6B7280]">
+                          Dispatches exclusively to active Pro subscribers.
+                        </p>
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          broadcastAudience === 'pro_only'
+                            ? 'border-[#F95700] bg-[#F95700] text-white'
+                            : 'border-[#D1D5DB] bg-white'
+                        }`}
+                      >
+                        {broadcastAudience === 'pro_only' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-[#6B7280] leading-relaxed">
+                  Emails are sent via Sendbyte Africa with branded HTML styling and direct CTA button to open and complete the task.
+                </p>
+              </div>
+
+              <div className="p-3 sm:p-3.5 border-t border-[#E5E7EB] bg-[#F7F7F8] flex items-center justify-end gap-2.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedTaskForBroadcast(null)}
+                  disabled={isBroadcasting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isBroadcasting}
+                  loadingText="Broadcasting..."
+                  className="flex items-center gap-1.5"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Send Broadcast Email</span>
                 </Button>
               </div>
             </form>
